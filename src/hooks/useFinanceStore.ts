@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-// Definicje typów zgodne z bazą danych
+// Typy zgodne z bazą danych
 export interface Transaction {
   id: string;
   amount: number;
@@ -9,7 +9,7 @@ export interface Transaction {
   wallet: string; // ID portfela
   walletName: string;
   type: 'income' | 'outcome';
-  description: string | null; // Może być null w bazie
+  description: string | null;
 }
 
 export interface Wallet {
@@ -37,11 +37,10 @@ interface FinanceState {
   assets: Asset[];
   activeWalletId: string | null;
   
-  // Settery (tylko aktualizują widok)
+  // Tylko settery - żadnej logiki dodawania/usuwania tutaj!
   setWallets: (wallets: Wallet[]) => void;
   setTransactions: (transactions: Transaction[]) => void;
   setAssets: (assets: Asset[]) => void;
-  
   setActiveWallet: (id: string | null) => void;
 }
 
@@ -54,6 +53,5 @@ export const useFinanceStore = create<FinanceState>((set) => ({
   setWallets: (wallets) => set({ wallets }),
   setTransactions: (transactions) => set({ transactions }),
   setAssets: (assets) => set({ assets }),
-  
   setActiveWallet: (id) => set({ activeWalletId: id }),
 }));
