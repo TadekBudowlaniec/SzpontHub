@@ -186,17 +186,17 @@ export async function addWalletAction(data: any) {
   if (!userId) throw new Error("Unauthorized");
 
   const { error } = await supabaseAdmin
-    .from('Wallet')
+    .from('wallets')
     .insert({
       id: nanoid(),
-      userId,
+      user_id: userId,
       name: data.name,
       type: data.type,
       color: data.color,
       icon: data.icon,
       balance: 0,
       currency: 'PLN',
-      createdAt: new Date().toISOString()
+      created_at: new Date().toISOString()
     });
 
   if (error) {
@@ -213,15 +213,15 @@ export async function editWalletAction(id: string, data: any) {
 
   // Sprawdź czy portfel należy do użytkownika
   const { data: wallet } = await supabaseAdmin
-    .from('Wallet')
-    .select('userId')
+    .from('wallets')
+    .select('user_id')
     .eq('id', id)
     .single();
 
-  if (!wallet || wallet.userId !== userId) return;
+  if (!wallet || wallet.user_id !== userId) return;
 
   await supabaseAdmin
-    .from('Wallet')
+    .from('wallets')
     .update({
       name: data.name,
       type: data.type,
@@ -239,21 +239,21 @@ export async function deleteWalletAction(id: string) {
 
   // Sprawdź czy portfel należy do użytkownika
   const { data: wallet } = await supabaseAdmin
-    .from('Wallet')
-    .select('userId')
+    .from('wallets')
+    .select('user_id')
     .eq('id', id)
     .single();
 
-  if (!wallet || wallet.userId !== userId) return;
+  if (!wallet || wallet.user_id !== userId) return;
 
   // Usuń najpierw transakcje (Supabase nie ma cascade by default)
   await supabaseAdmin
-    .from('Transaction')
+    .from('transactions')
     .delete()
-    .eq('walletId', id);
+    .eq('wallet_id', id);
 
   await supabaseAdmin
-    .from('Wallet')
+    .from('wallets')
     .delete()
     .eq('id', id);
 
