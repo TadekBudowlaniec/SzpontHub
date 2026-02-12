@@ -1,7 +1,17 @@
 'use server';
 
-import { createClient } from '@/lib/supabase/server';
-import { supabaseAdmin } from '@/lib/supabase/admin';
+// 1. Zmień import na createClient
+import { createClient } from '@/lib/supabase/server'; 
+import { getServerSession } from 'next-auth';
+// ... reszta importów
+
+// ...
+
+// Helper do pobierania klienta Supabase
+async function getSupabase() {
+  // 2. Tutaj też wywołaj createClient() zamiast createServerClient()
+  return await createClient(); 
+}import { supabaseAdmin } from '@/lib/supabase/admin';
 import { revalidatePath } from 'next/cache';
 import { nanoid } from 'nanoid';
 import { Wallet, Transaction, Asset } from '@/types/db';
