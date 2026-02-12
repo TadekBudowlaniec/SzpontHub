@@ -1,5 +1,13 @@
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabase/admin";
+import bcrypt from "bcryptjs";
+import { createClient } from "@supabase/supabase-js";
+
+// Tutaj musimy użyć service_role key, żeby móc utworzyć użytkownika
+// pomijając RLS (Row Level Security) jeśli jest włączone
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 export async function POST(request: Request) {
   try {
@@ -7,51 +15,30 @@ export async function POST(request: Request) {
     const { email, name, password } = body;
 
     if (!email || !name || !password) {
-      return new NextResponse("Brakujące dane", { status: 400 });
+      return new NextResponse("Missing info", { status: 400 });
     }
 
-    // Utwórz użytkownika przez Supabase Auth
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true, // Automatycznie potwierdź email
-      user_metadata: {
-        name,
-      },
-    });
+    const hashedPassword = await bcrypt.hash(password, 12);
 
-    if (authError) {
-      console.error("Supabase auth error:", authError);
-      if (authError.message.includes("already")) {
-        return new NextResponse("Email już istnieje", { status: 400 });
-      }
-      return new NextResponse(authError.message, { status: 400 });
-    }
-
-    // Dodaj użytkownika do tabeli User
-    const { error: dbError } = await supabaseAdmin
-      .from("User")
+    const { data, error } = await supabaseAdmin
+      .from('User')
       .insert({
-        id: authData.user.id,
         email,
         name,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      });
+        password: hashedPassword,
+        image: '',
+        emailVerified: null
+      })
+      .select()
+      .single();
 
-    if (dbError) {
-      console.error("Database error:", dbError);
-      // Usuń użytkownika z auth jeśli nie udało się dodać do bazy
-      await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
-      return new NextResponse("Błąd bazy danych", { status: 500 });
+    if (error) {
+      console.error(error);
+      return new NextResponse("User exists or error", { status: 500 });
     }
 
-    return NextResponse.json({
-      message: "Konto utworzone pomyślnie",
-      user: { id: authData.user.id, email, name }
-    });
+    return NextResponse.json(data);
   } catch (error: any) {
-    console.error("Registration error:", error);
-    return new NextResponse(error.message || "Błąd serwera", { status: 500 });
+    return new NextResponse("Internal Error", { status: 500 });
   }
 }
