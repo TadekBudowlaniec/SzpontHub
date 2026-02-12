@@ -1,22 +1,31 @@
 import { ReactNode } from 'react';
-import Link from 'next/link'; // Importujemy Link
-import { LayoutDashboard, TrendingUp, Wallet, Settings, Menu } from 'lucide-react';
+import Link from 'next/link';
+import { LayoutDashboard, TrendingUp, Wallet, Menu } from 'lucide-react';
 
 interface DashboardLayoutProps {
   children: ReactNode;
 }
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
+  // Zaktualizowane Logo
+  const Logo = () => (
+    <div className="flex items-center font-extrabold text-xl tracking-tight">
+      <span className="text-emerald-400 text-2xl">$</span>
+      <span className="text-emerald-400">zpont</span>
+      <span className="bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent ml-1.5">Hub</span>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-900 to-gray-900">
       {/* Sidebar */}
       <aside className="fixed left-0 top-0 h-full w-64 bg-gray-900/50 backdrop-blur-xl border-r border-gray-800 z-50 hidden lg:block">
         <div className="p-6">
           <div className="flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-pink-600 rounded-lg flex items-center justify-center">
-              <TrendingUp className="w-6 h-6 text-white" />
+            <div className="w-10 h-10 bg-gradient-to-br from-emerald-600/20 to-purple-600/20 border border-emerald-500/30 rounded-lg flex items-center justify-center shadow-lg shadow-emerald-900/20">
+              <TrendingUp className="w-6 h-6 text-emerald-400" />
             </div>
-            <h1 className="text-xl font-bold text-white">$zpont Hub</h1>
+            <Logo />
           </div>
           
           <nav className="space-y-2">
@@ -24,24 +33,22 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               <LayoutDashboard className="w-5 h-5" />
               <span className="font-medium">Dashboard</span>
             </Link>
-            <Link href="/wallets" className="flex items-center gap-3 px-4 py-3 text-gray-400 hover:text-white hover:bg-gray-800/50 rounded-lg transition-colors">
+            
+            <Link href="#wallets" className="flex items-center gap-3 px-4 py-3 text-gray-400 hover:text-white hover:bg-gray-800/50 rounded-lg transition-colors">
               <Wallet className="w-5 h-5" />
               <span className="font-medium">Portfele</span>
             </Link>
-            <Link href="/investments" className="flex items-center gap-3 px-4 py-3 text-gray-400 hover:text-white hover:bg-gray-800/50 rounded-lg transition-colors">
+            
+            <Link href="#assets" className="flex items-center gap-3 px-4 py-3 text-gray-400 hover:text-white hover:bg-gray-800/50 rounded-lg transition-colors">
               <TrendingUp className="w-5 h-5" />
               <span className="font-medium">Inwestycje</span>
-            </Link>
-            <Link href="/settings" className="flex items-center gap-3 px-4 py-3 text-gray-400 hover:text-white hover:bg-gray-800/50 rounded-lg transition-colors">
-              <Settings className="w-5 h-5" />
-              <span className="font-medium">Ustawienia</span>
             </Link>
           </nav>
         </div>
         
         <div className="absolute bottom-0 left-0 right-0 p-6 border-t border-gray-800">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-full flex items-center justify-center text-white font-bold">
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-full flex items-center justify-center text-white font-bold shadow-lg">
               JK
             </div>
             <div>
@@ -58,7 +65,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           <button className="p-2 hover:bg-gray-800 rounded-lg transition-colors">
             <Menu className="w-6 h-6 text-white" />
           </button>
-          <h1 className="text-lg font-bold text-white">$zpont Hub</h1>
+          <Logo />
         </div>
       </header>
 
@@ -72,7 +79,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       {/* Background Effects */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-0 right-0 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-0 left-0 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-0 left-0 w-96 h-96 bg-emerald-600/10 rounded-full blur-3xl"></div>
       </div>
     </div>
   );

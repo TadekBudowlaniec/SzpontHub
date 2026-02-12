@@ -1,32 +1,49 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Wallet as WalletIcon } from 'lucide-react';
-import { useFinanceStore } from '@/hooks/useFinanceStore';
+import { useFinanceStore, Wallet } from '@/hooks/useFinanceStore';
 
 interface WalletModalProps {
   isOpen: boolean;
   onClose: () => void;
+  editingWallet?: Wallet | null;
 }
 
-export function WalletModal({ isOpen, onClose }: WalletModalProps) {
-  const addWallet = useFinanceStore(state => state.addWallet);
+export function WalletModal({ isOpen, onClose, editingWallet }: WalletModalProps) {
+  const { addWallet, editWallet } = useFinanceStore();
+  
   const [name, setName] = useState('');
   const [type, setType] = useState<'fiat' | 'crypto' | 'stock'>('fiat');
   const [color, setColor] = useState('from-blue-500 to-cyan-600');
+
+  // Wypełnij dane przy edycji
+  useEffect(() => {
+    if (editingWallet) {
+      setName(editingWallet.name);
+      setType(editingWallet.type);
+      setColor(editingWallet.color);
+    } else {
+      setName('');
+      setType('fiat');
+      setColor('from-blue-500 to-cyan-600');
+    }
+  }, [editingWallet, isOpen]);
 
   if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    addWallet({
-      name,
-      type,
-      color,
-      icon: type === 'crypto' ? '₿' : type === 'stock' ? '📈' : '💵'
-    });
+    
+    const icon = type === 'crypto' ? '₿' : type === 'stock' ? '📈' : '💵';
+    
+    if (editingWallet) {
+      editWallet(editingWallet.id, { name, type, color, icon });
+    } else {
+      addWallet({ name, type, color, icon });
+    }
+    
     onClose();
-    setName('');
   };
 
   return (
@@ -34,7 +51,8 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
       <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 w-full max-w-md shadow-2xl">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-bold text-white flex items-center gap-2">
-            <WalletIcon className="w-5 h-5 text-purple-400" /> Dodaj Portfel
+            <WalletIcon className="w-5 h-5 text-purple-400" /> 
+            {editingWallet ? 'Edytuj Portfel' : 'Dodaj Portfel'}
           </h2>
           <button onClick={onClose} className="text-gray-400 hover:text-white">
             <X className="w-5 h-5" />
@@ -90,7 +108,7 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
             type="submit"
             className="w-full bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 rounded-lg transition-colors mt-4"
           >
-            Utwórz portfel
+            {editingWallet ? 'Zapisz zmiany' : 'Utwórz portfel'}
           </button>
         </form>
       </div>

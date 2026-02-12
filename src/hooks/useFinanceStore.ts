@@ -3,11 +3,11 @@ import { persist } from 'zustand/middleware';
 
 export interface Transaction {
   id: string;
-  amount: number;
+  amount: number; // Ujemne dla wydatków, dodatnie dla przychodów
   category: string;
   date: string;
-  wallet: string; // Przechowujemy ID portfela dla lepszej spójności, ale w UI wyświetlamy nazwę
-  walletName: string; // Helper do wyświetlania
+  wallet: string;
+  walletName: string;
   type: 'income' | 'outcome';
   description: string;
 }
@@ -35,7 +35,7 @@ interface FinanceState {
   wallets: Wallet[];
   transactions: Transaction[];
   assets: Asset[];
-  activeWalletId: string | null; // Do filtrowania
+  activeWalletId: string | null;
   
   // Actions
   addTransaction: (transaction: Omit<Transaction, 'id'>) => void;
@@ -43,35 +43,24 @@ interface FinanceState {
   editTransaction: (id: string, updatedData: Omit<Transaction, 'id'>) => void;
   
   addWallet: (wallet: Omit<Wallet, 'id' | 'balance'>) => void;
+  removeWallet: (id: string) => void;
+  editWallet: (id: string, updatedData: Partial<Wallet>) => void;
   setActiveWallet: (id: string | null) => void;
   updateAsset: (id: string, updates: Partial<Asset>) => void;
 }
 
-// Helper do aktualizacji salda
-const updateWalletBalance = (wallets: Wallet[], walletId: string, amount: number, type: 'income' | 'outcome', reverse: boolean = false) => {
-  return wallets.map(w => {
-    if (w.id === walletId) {
-      const value = type === 'income' ? amount : -amount;
-      const finalValue = reverse ? -value : value;
-      return { ...w, balance: w.balance + finalValue };
-    }
-    return w;
-  });
-};
-
-// Mock Data (skrócone dla czytelności)
+// Mock Data
 const mockWallets: Wallet[] = [
   { id: '1', name: 'Gotówka', balance: 5420.50, icon: '💵', color: 'from-green-500 to-emerald-600', type: 'fiat' },
   { id: '2', name: 'Konto Bankowe', balance: 45230.75, icon: '🏦', color: 'from-blue-500 to-cyan-600', type: 'fiat' },
 ];
-// ... reszta mocków bez zmian ...
 
 export const useFinanceStore = create<FinanceState>()(
   persist(
     (set, get) => ({
       wallets: mockWallets,
-      transactions: [], // Zacznijmy od pustej lub mockowej listy
-      assets: [], 
+      transactions: [],
+      assets: [],
       activeWalletId: null,
 
       setActiveWallet: (id) => set({ activeWalletId: id }),
@@ -80,12 +69,32 @@ export const useFinanceStore = create<FinanceState>()(
         wallets: [...state.wallets, { ...walletData, id: Date.now().toString(), balance: 0 }]
       })),
 
+      removeWallet: (id) => set((state) => ({
+        wallets: state.wallets.filter(w => w.id !== id),
+        activeWalletId: state.activeWalletId === id ? null : state.activeWalletId
+      })),
+
+      editWallet: (id, updatedData) => set((state) => ({
+        wallets: state.wallets.map(w => w.id === id ? { ...w, ...updatedData } : w)
+      })),
+
       addTransaction: (transaction) => {
         const newTransaction = { ...transaction, id: Date.now().toString() };
-        set((state) => ({
-          transactions: [newTransaction, ...state.transactions],
-          wallets: updateWalletBalance(state.wallets, transaction.wallet, transaction.amount, transaction.type)
-        }));
+        
+        set((state) => {
+          // Aktualizuj saldo portfela: Po prostu dodaj kwotę (ujemną dla wydatku, dodatnią dla przychodu)
+          const updatedWallets = state.wallets.map(w => {
+            if (w.id === transaction.wallet) {
+              return { ...w, balance: w.balance + transaction.amount };
+            }
+            return w;
+          });
+
+          return {
+            transactions: [newTransaction, ...state.transactions],
+            wallets: updatedWallets
+          };
+        });
       },
 
       removeTransaction: (id) => {
@@ -93,11 +102,21 @@ export const useFinanceStore = create<FinanceState>()(
         const transaction = state.transactions.find(t => t.id === id);
         if (!transaction) return;
 
-        set((state) => ({
-          transactions: state.transactions.filter(t => t.id !== id),
-          // Odwracamy działanie transakcji na saldo (reverse = true)
-          wallets: updateWalletBalance(state.wallets, transaction.wallet, transaction.amount, transaction.type, true)
-        }));
+        set((state) => {
+          // Cofnij saldo: Odejmij kwotę transakcji. 
+          // Jeśli to był wydatek (-100), to balance - (-100) da balance + 100. Correct.
+          const updatedWallets = state.wallets.map(w => {
+            if (w.id === transaction.wallet) {
+              return { ...w, balance: w.balance - transaction.amount };
+            }
+            return w;
+          });
+
+          return {
+            transactions: state.transactions.filter(t => t.id !== id),
+            wallets: updatedWallets
+          };
+        });
       },
 
       editTransaction: (id, updatedData) => {
@@ -105,15 +124,27 @@ export const useFinanceStore = create<FinanceState>()(
         const oldTransaction = state.transactions.find(t => t.id === id);
         if (!oldTransaction) return;
 
-        // 1. Cofnij wpływ starej transakcji
-        let tempWallets = updateWalletBalance(state.wallets, oldTransaction.wallet, oldTransaction.amount, oldTransaction.type, true);
-        
-        // 2. Dodaj wpływ nowej transakcji
-        tempWallets = updateWalletBalance(tempWallets, updatedData.wallet, updatedData.amount, updatedData.type, false);
+        set((state) => {
+          const updatedWallets = state.wallets.map(w => {
+            let newBalance = w.balance;
 
-        set({
-          transactions: state.transactions.map(t => t.id === id ? { ...updatedData, id } : t),
-          wallets: tempWallets
+            // 1. Cofnij starą transakcję (jeśli dotyczyła tego portfela)
+            if (w.id === oldTransaction.wallet) {
+              newBalance -= oldTransaction.amount;
+            }
+
+            // 2. Dodaj nową transakcję (jeśli dotyczy tego portfela)
+            if (w.id === updatedData.wallet) {
+              newBalance += updatedData.amount;
+            }
+
+            return { ...w, balance: newBalance };
+          });
+
+          return {
+            transactions: state.transactions.map(t => t.id === id ? { ...updatedData, id } : t),
+            wallets: updatedWallets
+          };
         });
       },
 
