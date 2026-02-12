@@ -5,36 +5,42 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
 
+// KLUCZOWA ZMIANA: Importujemy typy dokładnie te, których używa frontend!
+import { Wallet, Transaction, Asset } from '@/hooks/useFinanceStore';
+
 async function getUserId() {
   const session = await getServerSession(authOptions);
   // @ts-ignore
   return session?.user?.id;
 }
 
-// --- POBIERANIE DANYCH (FIXED) ---
+// --- POBIERANIE DANYCH ---
 
-export async function getDashboardData() {
+// Wymuszamy na funkcji, żeby zwracała dokładnie to, czego oczekuje page.tsx
+export async function getDashboardData(): Promise<{
+  wallets: Wallet[];
+  transactions: Transaction[];
+  assets: Asset[];
+} | null> {
   const userId = await getUserId();
   if (!userId) return null;
 
   const supabase = await createClient();
 
-  // 1. Wallets: Pobieramy i mapujemy na format, który lubi frontend
+  // 1. Wallets
   const { data: walletsRaw } = await supabase
     .from('wallets')
     .select('*')
     .eq('user_id', userId);
 
-  const wallets = (walletsRaw || []).map((w: any) => ({
+  // Zmieniamy dane z bazy na format dla frontendu
+  const wallets: Wallet[] = (walletsRaw || []).map((w: any) => ({
     id: w.id,
-    userId: w.user_id,          // Baza: user_id -> Frontend: userId
     name: w.name,
-    type: w.type,
+    type: w.type as 'fiat' | 'crypto' | 'stock',
     balance: w.balance,
-    currency: w.currency,
     color: w.color,
     icon: w.icon,
-    createdAt: w.created_at,    // Baza: created_at -> Frontend: createdAt
   }));
 
   // 2. Transactions
@@ -43,50 +49,41 @@ export async function getDashboardData() {
     .select('*, wallets(name)')
     .order('date', { ascending: false });
 
-  // Filtrujemy tylko transakcje zalogowanego usera
   const userTransactions = (transactionsRaw || []).filter(
     (t: any) => t.wallets && t.wallets.user_id === userId
   );
 
-  const transactions = userTransactions.map((t: any) => ({
+  const transactions: Transaction[] = userTransactions.map((t: any) => ({
     id: t.id,
-    walletId: t.wallet_id,      // Tłumaczenie
     amount: t.amount,
-    type: t.type,
     category: t.category,
-    description: t.description,
     date: t.date ? t.date.split('T')[0] : '',
-    createdAt: t.created_at,
+    wallet: t.wallet_id,
     walletName: t.wallets?.name || 'Nieznany',
-    wallet: t.wallet_id, 
+    type: t.type as 'income' | 'outcome',
+    description: t.description || null,
   }));
 
-  // 3. Assets (Najważniejsze - naprawa błędu currentPrice)
+  // 3. Assets
   const { data: assetsRaw } = await supabase
     .from('assets')
     .select('*')
     .eq('user_id', userId);
 
-  const assets = (assetsRaw || []).map((a: any) => ({
+  const assets: Asset[] = (assetsRaw || []).map((a: any) => ({
     id: a.id,
-    userId: a.user_id,
     name: a.name,
     symbol: a.symbol,
     quantity: a.quantity,
-    currentPrice: a.current_price, // Tłumaczenie: current_price -> currentPrice
+    currentPrice: a.current_price, // Tłumaczymy snake_case z bazy na camelCase
     totalValue: a.quantity * a.current_price, 
     change24h: a.change24h || 0,
   }));
 
-  // ZWRACAMY JAKO 'any', ŻEBY TYPESCRIPT NIE BLOKOWAŁ DEPLOYA
-  return { 
-    wallets: wallets as any, 
-    transactions: transactions as any, 
-    assets: assets as any 
-  };
+  return { wallets, transactions, assets };
 }
 
-// --- TRANSAKCJE (ZAPIS) ---
+// --- ZAPIS DANYCH (Backend wysyła do bazy snake_case) ---
 
 export async function addTransactionAction(data: {
   amount: number;
@@ -113,7 +110,6 @@ export async function addTransactionAction(data: {
 
   if (error) throw new Error(error.message);
 
-  // Update salda
   const { data: wallet } = await supabase.from('wallets').select('balance').eq('id', data.wallet).single();
   
   if (wallet) {
@@ -168,8 +164,6 @@ export async function deleteTransactionAction(id: string) {
   revalidatePath('/');
 }
 
-// --- PORTFELE ---
-
 export async function addWalletAction(data: any) {
   const userId = await getUserId();
   if (!userId) throw new Error("Unauthorized");
@@ -195,5 +189,33 @@ export async function deleteWalletAction(id: string) {
 
   await supabase.from('transactions').delete().eq('wallet_id', id);
   await supabase.from('wallets').delete().eq('id', id);
+  revalidatePath('/');
+}
+
+// --- BRAKUJĄCE FUNKCJE (DODAJ NA DOLE PLIKU) ---
+
+export async function editWalletAction(id: string, data: any) {
+  const userId = await getUserId();
+  if (!userId) throw new Error("Unauthorized");
+  
+  const supabase = await createClient();
+
+  // Aktualizujemy dane w bazie dla konkretnego portfela (snake_case dla kolumn)
+  await supabase.from('wallets').update({
+    name: data.name,
+    type: data.type,
+    color: data.color,
+    icon: data.icon
+  }).eq('id', id).eq('user_id', userId); // Upewniamy się, że to portfel tego usera
+
+  revalidatePath('/');
+}
+
+export async function signOutAction() {
+  const supabase = await createClient();
+  
+  // Wylogowanie sesji Supabase (jeśli z niej korzystasz lokalnie)
+  await supabase.auth.signOut();
+  
   revalidatePath('/');
 }
