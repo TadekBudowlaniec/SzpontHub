@@ -1,117 +1,109 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { Transaction } from '@/hooks/useFinanceStore';
+import { format, subDays, isSameDay, parseISO } from 'date-fns';
+import { pl } from 'date-fns/locale';
 
-type Interval = '1D' | '1W' | '1M';
+interface FinancialChartProps {
+  transactions: Transaction[];
+}
 
-const generateMockData = (interval: Interval) => {
-  const now = new Date();
-  const data = [];
-  
-  if (interval === '1D') {
-    // 24 hours
-    for (let i = 23; i >= 0; i--) {
-      const time = new Date(now.getTime() - i * 60 * 60 * 1000);
+export function FinancialChart({ transactions }: FinancialChartProps) {
+  const [range, setRange] = useState<'1W' | '1M' | '3M'>('1M');
+
+  // Funkcja generująca dane do wykresu na podstawie historii transakcji
+  const chartData = useMemo(() => {
+    const days = range === '1W' ? 7 : range === '1M' ? 30 : 90;
+    const data = [];
+    let currentBalance = 0; 
+    
+    // Obliczamy balans startowy (total wszystkich transakcji przed analizowanym okresem)
+    // To jest uproszczenie, w pełnej wersji można brać snapshoty
+    
+    const today = new Date();
+    const startDate = subDays(today, days);
+
+    // Generujemy dni dla osi X
+    for (let i = days; i >= 0; i--) {
+      const date = subDays(today, i);
+      const dateStr = format(date, 'yyyy-MM-dd');
+      
+      // Znajdź transakcje do tego dnia włącznie, aby obliczyć skumulowany stan
+      // Uwaga: To symulacja historii portfela na podstawie transakcji
+      const transactionsUntilNow = transactions.filter(t => new Date(t.date) <= date);
+      
+      const balance = transactionsUntilNow.reduce((acc, t) => {
+        return acc + (t.type === 'income' ? t.amount : -t.amount);
+      }, 0);
+
       data.push({
-        time: time.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' }),
-        value: 147000 + Math.random() * 4000 + (23 - i) * 100,
+        date: format(date, 'dd MMM', { locale: pl }),
+        value: balance,
+        fullDate: dateStr
       });
     }
-  } else if (interval === '1W') {
-    // 7 days
-    for (let i = 6; i >= 0; i--) {
-      const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
-      data.push({
-        time: date.toLocaleDateString('pl-PL', { weekday: 'short' }),
-        value: 145000 + Math.random() * 6000 + (6 - i) * 500,
-      });
-    }
-  } else {
-    // 30 days
-    for (let i = 29; i >= 0; i--) {
-      const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
-      data.push({
-        time: date.toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' }),
-        value: 135000 + Math.random() * 15000 + (29 - i) * 400,
-      });
-    }
-  }
-  
-  return data;
-};
 
-export function FinancialChart() {
-  const [interval, setInterval] = useState<Interval>('1W');
-  
-  const data = useMemo(() => generateMockData(interval), [interval]);
-  
-  const CustomTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-gray-900/95 border border-purple-500/30 rounded-lg p-3 backdrop-blur-sm">
-          <p className="text-gray-400 text-sm">{payload[0].payload.time}</p>
-          <p className="text-white font-bold text-lg">
-            {payload[0].value.toLocaleString('pl-PL', { style: 'currency', currency: 'PLN' })}
-          </p>
-        </div>
-      );
-    }
-    return null;
-  };
+    return data;
+  }, [transactions, range]);
 
   return (
-    <div className="bg-gray-900/50 backdrop-blur-sm border border-gray-800 rounded-xl p-6">
+    <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-6 backdrop-blur-sm h-[400px]">
       <div className="flex items-center justify-between mb-6">
-        <div>
-          <h2 className="text-xl font-bold text-white mb-1">Wartość Portfela</h2>
-          <p className="text-gray-400 text-sm">Całkowita wartość w czasie</p>
-        </div>
-        
-        <div className="flex gap-2 bg-gray-800/50 rounded-lg p-1">
-          {(['1D', '1W', '1M'] as Interval[]).map((int) => (
+        <h3 className="text-xl font-bold text-white">Wartość Portfela (Historia)</h3>
+        <div className="flex gap-2 bg-gray-800 rounded-lg p-1">
+          {(['1W', '1M', '3M'] as const).map((r) => (
             <button
-              key={int}
-              onClick={() => setInterval(int)}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
-                interval === int
-                  ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/30'
-                  : 'text-gray-400 hover:text-white hover:bg-gray-700/50'
+              key={r}
+              onClick={() => setRange(r)}
+              className={`px-3 py-1 text-sm rounded-md transition-all ${
+                range === r 
+                  ? 'bg-purple-600 text-white shadow-lg' 
+                  : 'text-gray-400 hover:text-white'
               }`}
             >
-              {int}
+              {r}
             </button>
           ))}
         </div>
       </div>
 
-      <ResponsiveContainer width="100%" height={300}>
-        <AreaChart data={data}>
+      <ResponsiveContainer width="100%" height="100%">
+        <AreaChart data={chartData}>
           <defs>
             <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#9333ea" stopOpacity={0.3}/>
-              <stop offset="95%" stopColor="#9333ea" stopOpacity={0}/>
+              <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3}/>
+              <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
             </linearGradient>
           </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.3} />
+          <CartesianGrid strokeDasharray="3 3" stroke="#374151" vertical={false} />
           <XAxis 
-            dataKey="time" 
+            dataKey="date" 
             stroke="#9ca3af" 
-            style={{ fontSize: '12px' }}
+            tick={{ fill: '#9ca3af' }} 
+            axisLine={false}
             tickLine={false}
+            minTickGap={30}
           />
           <YAxis 
             stroke="#9ca3af" 
-            style={{ fontSize: '12px' }}
-            tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
+            tick={{ fill: '#9ca3af' }} 
+            axisLine={false}
             tickLine={false}
+            tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
           />
-          <Tooltip content={<CustomTooltip />} />
+          <Tooltip 
+            contentStyle={{ backgroundColor: '#111827', borderColor: '#374151', borderRadius: '0.5rem' }}
+            itemStyle={{ color: '#fff' }}
+            formatter={(value: number) => [`${value.toLocaleString()} PLN`, 'Wartość']}
+          />
           <Area 
             type="monotone" 
             dataKey="value" 
-            stroke="#9333ea" 
+            stroke="#8b5cf6" 
             strokeWidth={2}
+            fillOpacity={1} 
             fill="url(#colorValue)" 
           />
         </AreaChart>

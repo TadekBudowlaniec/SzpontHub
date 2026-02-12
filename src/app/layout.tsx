@@ -5,7 +5,7 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Finance Hub - Zarządzaj swoimi finansami",
+  title: "$zpont Hub - Zarządzaj swoimi finansami",
   description: "Nowoczesna aplikacja do zarządzania finansami osobistymi i śledzenia inwestycji",
 };
 

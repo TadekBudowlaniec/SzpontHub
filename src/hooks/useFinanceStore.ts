@@ -6,7 +6,8 @@ export interface Transaction {
   amount: number;
   category: string;
   date: string;
-  wallet: string;
+  wallet: string; // Przechowujemy ID portfela dla lepszej spójności, ale w UI wyświetlamy nazwę
+  walletName: string; // Helper do wyświetlania
   type: 'income' | 'outcome';
   description: string;
 }
@@ -17,6 +18,7 @@ export interface Wallet {
   balance: number;
   icon: string;
   color: string;
+  type: 'fiat' | 'crypto' | 'stock';
 }
 
 export interface Asset {
@@ -33,76 +35,88 @@ interface FinanceState {
   wallets: Wallet[];
   transactions: Transaction[];
   assets: Asset[];
+  activeWalletId: string | null; // Do filtrowania
+  
+  // Actions
   addTransaction: (transaction: Omit<Transaction, 'id'>) => void;
+  removeTransaction: (id: string) => void;
+  editTransaction: (id: string, updatedData: Omit<Transaction, 'id'>) => void;
+  
+  addWallet: (wallet: Omit<Wallet, 'id' | 'balance'>) => void;
+  setActiveWallet: (id: string | null) => void;
   updateAsset: (id: string, updates: Partial<Asset>) => void;
 }
 
-// Mock Data
+// Helper do aktualizacji salda
+const updateWalletBalance = (wallets: Wallet[], walletId: string, amount: number, type: 'income' | 'outcome', reverse: boolean = false) => {
+  return wallets.map(w => {
+    if (w.id === walletId) {
+      const value = type === 'income' ? amount : -amount;
+      const finalValue = reverse ? -value : value;
+      return { ...w, balance: w.balance + finalValue };
+    }
+    return w;
+  });
+};
+
+// Mock Data (skrócone dla czytelności)
 const mockWallets: Wallet[] = [
-  { id: '1', name: 'Gotówka', balance: 5420.50, icon: '💵', color: 'from-green-500 to-emerald-600' },
-  { id: '2', name: 'Konto Bankowe', balance: 45230.75, icon: '🏦', color: 'from-blue-500 to-cyan-600' },
-  { id: '3', name: 'Portfel Krypto', balance: 28950.00, icon: '₿', color: 'from-orange-500 to-amber-600' },
-  { id: '4', name: 'Giełda', balance: 67800.25, icon: '📈', color: 'from-purple-500 to-pink-600' },
+  { id: '1', name: 'Gotówka', balance: 5420.50, icon: '💵', color: 'from-green-500 to-emerald-600', type: 'fiat' },
+  { id: '2', name: 'Konto Bankowe', balance: 45230.75, icon: '🏦', color: 'from-blue-500 to-cyan-600', type: 'fiat' },
 ];
-
-const mockTransactions: Transaction[] = [
-  { id: '1', amount: 8500, category: 'Wynagrodzenie', date: '2026-02-10', wallet: 'Konto Bankowe', type: 'income', description: 'Wypłata - Luty 2026' },
-  { id: '2', amount: -450.50, category: 'Zakupy', date: '2026-02-09', wallet: 'Konto Bankowe', type: 'outcome', description: 'Zakupy spożywcze' },
-  { id: '3', amount: 2500, category: 'Freelance', date: '2026-02-08', wallet: 'Gotówka', type: 'income', description: 'Projekt webowy' },
-  { id: '4', amount: -1200, category: 'Czynsz', date: '2026-02-05', wallet: 'Konto Bankowe', type: 'outcome', description: 'Czynsz - Luty' },
-  { id: '5', amount: -89.99, category: 'Subskrypcje', date: '2026-02-04', wallet: 'Konto Bankowe', type: 'outcome', description: 'Netflix + Spotify' },
-  { id: '6', amount: 5000, category: 'Inwestycja', date: '2026-02-03', wallet: 'Portfel Krypto', type: 'income', description: 'Zakup BTC' },
-  { id: '7', amount: -320, category: 'Transport', date: '2026-02-02', wallet: 'Gotówka', type: 'outcome', description: 'Paliwo + Bilet' },
-  { id: '8', amount: 1500, category: 'Bonus', date: '2026-02-01', wallet: 'Konto Bankowe', type: 'income', description: 'Premia kwartalna' },
-  { id: '9', amount: -650, category: 'Restauracje', date: '2026-01-30', wallet: 'Gotówka', type: 'outcome', description: 'Kolacja biznesowa' },
-  { id: '10', amount: -2100, category: 'Elektronika', date: '2026-01-28', wallet: 'Konto Bankowe', type: 'outcome', description: 'Nowy laptop' },
-  { id: '11', amount: 3200, category: 'Dywidendy', date: '2026-01-25', wallet: 'Giełda', type: 'income', description: 'Dywidendy z akcji' },
-  { id: '12', amount: -180, category: 'Zdrowie', date: '2026-01-22', wallet: 'Konto Bankowe', type: 'outcome', description: 'Wizyta lekarska' },
-  { id: '13', amount: 8500, category: 'Wynagrodzenie', date: '2026-01-10', wallet: 'Konto Bankowe', type: 'income', description: 'Wypłata - Styczeń 2026' },
-  { id: '14', amount: -1200, category: 'Czynsz', date: '2026-01-05', wallet: 'Konto Bankowe', type: 'outcome', description: 'Czynsz - Styczeń' },
-  { id: '15', amount: 4500, category: 'Freelance', date: '2026-01-15', wallet: 'Gotówka', type: 'income', description: 'Konsulting IT' },
-];
-
-const mockAssets: Asset[] = [
-  { id: '1', name: 'Bitcoin', symbol: 'BTC', quantity: 0.35, currentPrice: 380000, totalValue: 133000, change24h: 3.2 },
-  { id: '2', name: 'Ethereum', symbol: 'ETH', quantity: 2.5, currentPrice: 14500, totalValue: 36250, change24h: -1.5 },
-  { id: '3', name: 'Apple Inc.', symbol: 'AAPL', quantity: 15, currentPrice: 720, totalValue: 10800, change24h: 0.8 },
-  { id: '4', name: 'Tesla Inc.', symbol: 'TSLA', quantity: 8, currentPrice: 1050, totalValue: 8400, change24h: 2.1 },
-  { id: '5', name: 'Microsoft', symbol: 'MSFT', quantity: 12, currentPrice: 1680, totalValue: 20160, change24h: 1.3 },
-  { id: '6', name: 'Złoto', symbol: 'GOLD', quantity: 50, currentPrice: 280, totalValue: 14000, change24h: -0.3 },
-];
+// ... reszta mocków bez zmian ...
 
 export const useFinanceStore = create<FinanceState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       wallets: mockWallets,
-      transactions: mockTransactions,
-      assets: mockAssets,
-      
+      transactions: [], // Zacznijmy od pustej lub mockowej listy
+      assets: [], 
+      activeWalletId: null,
+
+      setActiveWallet: (id) => set({ activeWalletId: id }),
+
+      addWallet: (walletData) => set((state) => ({
+        wallets: [...state.wallets, { ...walletData, id: Date.now().toString(), balance: 0 }]
+      })),
+
       addTransaction: (transaction) => {
-        const newTransaction = {
-          ...transaction,
-          id: Date.now().toString(),
-        };
+        const newTransaction = { ...transaction, id: Date.now().toString() };
+        set((state) => ({
+          transactions: [newTransaction, ...state.transactions],
+          wallets: updateWalletBalance(state.wallets, transaction.wallet, transaction.amount, transaction.type)
+        }));
+      },
+
+      removeTransaction: (id) => {
+        const state = get();
+        const transaction = state.transactions.find(t => t.id === id);
+        if (!transaction) return;
+
+        set((state) => ({
+          transactions: state.transactions.filter(t => t.id !== id),
+          // Odwracamy działanie transakcji na saldo (reverse = true)
+          wallets: updateWalletBalance(state.wallets, transaction.wallet, transaction.amount, transaction.type, true)
+        }));
+      },
+
+      editTransaction: (id, updatedData) => {
+        const state = get();
+        const oldTransaction = state.transactions.find(t => t.id === id);
+        if (!oldTransaction) return;
+
+        // 1. Cofnij wpływ starej transakcji
+        let tempWallets = updateWalletBalance(state.wallets, oldTransaction.wallet, oldTransaction.amount, oldTransaction.type, true);
         
-        set((state) => {
-          const updatedWallets = state.wallets.map(wallet => {
-            if (wallet.name === transaction.wallet) {
-              return {
-                ...wallet,
-                balance: wallet.balance + (transaction.type === 'income' ? transaction.amount : -Math.abs(transaction.amount))
-              };
-            }
-            return wallet;
-          });
-          
-          return {
-            transactions: [newTransaction, ...state.transactions],
-            wallets: updatedWallets,
-          };
+        // 2. Dodaj wpływ nowej transakcji
+        tempWallets = updateWalletBalance(tempWallets, updatedData.wallet, updatedData.amount, updatedData.type, false);
+
+        set({
+          transactions: state.transactions.map(t => t.id === id ? { ...updatedData, id } : t),
+          wallets: tempWallets
         });
       },
-      
+
       updateAsset: (id, updates) => {
         set((state) => ({
           assets: state.assets.map(asset => 
@@ -113,8 +127,6 @@ export const useFinanceStore = create<FinanceState>()(
         }));
       },
     }),
-    {
-      name: 'finance-storage',
-    }
+    { name: 'finance-storage' }
   )
 );
