@@ -1,14 +1,15 @@
 import { create } from 'zustand';
 
+// Definicje typów zgodne z bazą danych
 export interface Transaction {
   id: string;
   amount: number;
   category: string;
   date: string;
-  wallet: string; // To jest ID portfela
+  wallet: string; // ID portfela
   walletName: string;
   type: 'income' | 'outcome';
-  description: string;
+  description: string | null; // Może być null w bazie
 }
 
 export interface Wallet {
@@ -27,7 +28,7 @@ export interface Asset {
   quantity: number;
   currentPrice: number;
   totalValue: number;
-  change24h: number; // Opcjonalne, jeśli nie masz tego w bazie
+  change24h: number;
 }
 
 interface FinanceState {
@@ -36,7 +37,7 @@ interface FinanceState {
   assets: Asset[];
   activeWalletId: string | null;
   
-  // Settery (aktualizacja stanu z bazy)
+  // Settery (tylko aktualizują widok)
   setWallets: (wallets: Wallet[]) => void;
   setTransactions: (transactions: Transaction[]) => void;
   setAssets: (assets: Asset[]) => void;

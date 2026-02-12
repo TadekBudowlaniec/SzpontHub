@@ -13,11 +13,16 @@ export default async function Home() {
 
   const data = await getDashboardData();
 
+  // Jeśli użytkownik jest zalogowany, ale nie ma danych (np. błąd bazy), pokaż komunikat lub pusty dashboard
   if (!data) {
-    // Sytuacja brzegowa: user zalogowany ale nie ma go w bazie (np. usunięty)
-    return <div>Nie znaleziono danych użytkownika.</div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">
+        Ładowanie danych lub brak dostępu...
+      </div>
+    );
   }
 
+  // Przekazujemy dane z serwera do komponentu klienta
   return (
     <DashboardClient 
       initialWallets={data.wallets}

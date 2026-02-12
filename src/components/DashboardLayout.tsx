@@ -13,11 +13,7 @@ import { useFinanceStore, Transaction, Wallet, Asset } from '@/hooks/useFinanceS
 import { TrendingUp, Wallet as WalletIcon, ArrowUpRight, ArrowDownRight, Plus, Filter } from 'lucide-react';
 import { subDays } from 'date-fns';
 import { 
-  addTransactionAction, 
   deleteTransactionAction, 
-  editTransactionAction,
-  addWalletAction,
-  editWalletAction,
   deleteWalletAction
 } from '@/app/actions';
 
@@ -28,26 +24,27 @@ interface Props {
 }
 
 export function DashboardClient({ initialWallets, initialTransactions, initialAssets }: Props) {
+  // Stany lokalne
   const [isTransModalOpen, setIsTransModalOpen] = useState(false);
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
-  
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [editingWallet, setEditingWallet] = useState<Wallet | null>(null);
   const [range, setRange] = useState<'1W' | '1M' | '3M' | '1Y'>('1M');
 
+  // Store
   const { 
     wallets, transactions, assets, activeWalletId, 
     setWallets, setTransactions, setAssets, setActiveWallet 
   } = useFinanceStore();
 
-  // SYNCHRONIZACJA Z BAZĄ DANYCH
+  // 1. Synchronizacja danych z serwera do store
   useEffect(() => {
     setWallets(initialWallets);
     setTransactions(initialTransactions);
     setAssets(initialAssets);
   }, [initialWallets, initialTransactions, initialAssets, setWallets, setTransactions, setAssets]);
 
-  // --- OBLICZENIA (pozostają bez zmian) ---
+  // 2. Filtrowanie i Obliczenia (Statystyki)
   const filteredTransactions = useMemo(() => {
     if (!activeWalletId) return transactions;
     return transactions.filter(t => t.wallet === activeWalletId);
@@ -85,17 +82,11 @@ export function DashboardClient({ initialWallets, initialTransactions, initialAs
     };
   }, [wallets, assets, filteredTransactions, activeWalletId, range]);
 
-  // --- HANDLERY (Teraz wywołują Server Actions) ---
+  // 3. Handlery Akcji (CRUD)
 
-  // Transakcje
-  const handleAddTransactionSubmit = async (data: any) => {
-    // Uwaga: TransactionModal wywołuje store. Zamiast modyfikować Modal,
-    // najlepiej byłoby przekazać tę funkcję do Modala, ale na razie
-    // zakładamy, że logika w Modalu jest OK, a my tylko odświeżamy dane.
-    // ALE w Twoim obecnym TransactionModal używasz hooków ze store.
-    // TO WYMAGA POPRAWKI w TransactionModal lub tutaj.
-    // Najprościej: TransactionModal powinien tylko zbierać dane.
-    // Jednak żeby nie mieszać, w TransactionModal podmień wywołania store na actions.
+  const handleEditTransaction = (transaction: Transaction) => {
+    setEditingTransaction(transaction);
+    setIsTransModalOpen(true);
   };
 
   const handleDeleteTransaction = async (id: string) => {
@@ -104,17 +95,11 @@ export function DashboardClient({ initialWallets, initialTransactions, initialAs
     }
   };
 
-  const handleEditTransaction = (transaction: Transaction) => {
-    setEditingTransaction(transaction);
-    setIsTransModalOpen(true);
-  };
-
   const handleAddTransaction = () => {
     setEditingTransaction(null);
     setIsTransModalOpen(true);
   };
 
-  // Portfele
   const handleEditWallet = (wallet: Wallet) => {
     setEditingWallet(wallet);
     setIsWalletModalOpen(true);
@@ -148,6 +133,7 @@ export function DashboardClient({ initialWallets, initialTransactions, initialAs
               <span className="bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent ml-2">Hub</span>
             </h1>
           )}
+          
           <p className="text-gray-400">
             {activeWalletId 
               ? <button onClick={() => setActiveWallet(null)} className="text-purple-400 hover:underline flex items-center gap-1"><Filter className="w-3 h-3"/> Wróć do widoku głównego</button> 
@@ -166,7 +152,6 @@ export function DashboardClient({ initialWallets, initialTransactions, initialAs
 
       {/* STATYSTYKI */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        {/* Tu wklej swoje kafelki statystyk z poprzedniego page.tsx (NetWorth, Income, Outcome, Profit) */}
         <div className="bg-gradient-to-br from-purple-600/20 to-purple-900/20 border border-purple-500/30 rounded-xl p-6 backdrop-blur-sm shadow-lg">
           <div className="flex items-center justify-between mb-2">
             <span className="text-gray-400 text-sm">Saldo całkowite</span>
@@ -176,7 +161,7 @@ export function DashboardClient({ initialWallets, initialTransactions, initialAs
             {stats.totalNetWorth.toLocaleString('pl-PL', { style: 'currency', currency: 'PLN' })}
           </div>
         </div>
-        
+
         <div className="bg-gradient-to-br from-green-600/20 to-green-900/20 border border-green-500/30 rounded-xl p-6 backdrop-blur-sm shadow-lg">
           <div className="flex items-center justify-between mb-2">
             <span className="text-gray-400 text-sm">Przychody</span>
@@ -216,7 +201,11 @@ export function DashboardClient({ initialWallets, initialTransactions, initialAs
       {/* WYKRESY */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
         <div className="lg:col-span-2 shadow-lg rounded-xl overflow-hidden">
-          <FinancialChart transactions={filteredTransactions} range={range} setRange={setRange} />
+          <FinancialChart 
+            transactions={filteredTransactions} 
+            range={range} 
+            setRange={setRange} 
+          />
         </div>
         <div className="shadow-lg rounded-xl overflow-hidden">
           <BTCWidget />
