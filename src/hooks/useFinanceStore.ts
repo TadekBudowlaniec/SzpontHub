@@ -33,9 +33,6 @@ interface FinanceState {
   wallets: Wallet[];
   transactions: Transaction[];
   assets: Asset[];
-  totalNetWorth: number;
-  totalIncome: number;
-  totalOutcome: number;
   addTransaction: (transaction: Omit<Transaction, 'id'>) => void;
   updateAsset: (id: string, updates: Partial<Asset>) => void;
 }
@@ -77,34 +74,10 @@ const mockAssets: Asset[] = [
 
 export const useFinanceStore = create<FinanceState>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       wallets: mockWallets,
       transactions: mockTransactions,
       assets: mockAssets,
-      
-      get totalNetWorth() {
-        const walletsTotal = get().wallets.reduce((sum, wallet) => sum + wallet.balance, 0);
-        const assetsTotal = get().assets.reduce((sum, asset) => sum + asset.totalValue, 0);
-        return walletsTotal + assetsTotal;
-      },
-      
-      get totalIncome() {
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        
-        return get().transactions
-          .filter(t => t.type === 'income' && new Date(t.date) >= thirtyDaysAgo)
-          .reduce((sum, t) => sum + t.amount, 0);
-      },
-      
-      get totalOutcome() {
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        
-        return get().transactions
-          .filter(t => t.type === 'outcome' && new Date(t.date) >= thirtyDaysAgo)
-          .reduce((sum, t) => sum + Math.abs(t.amount), 0);
-      },
       
       addTransaction: (transaction) => {
         const newTransaction = {

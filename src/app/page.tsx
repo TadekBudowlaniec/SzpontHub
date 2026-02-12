@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { WalletCard } from '@/components/WalletCard';
 import { TransactionList } from '@/components/TransactionList';
@@ -15,9 +15,39 @@ import { TrendingUp, Wallet, ArrowUpRight, ArrowDownRight, Plus } from 'lucide-r
 
 export default function Home() {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const { wallets, transactions, assets, totalNetWorth, totalIncome, totalOutcome } = useFinanceStore();
+  
+  // Pobieramy tylko surowe dane ze store
+  const { wallets, transactions, assets } = useFinanceStore();
 
-  const profit = totalIncome - totalOutcome;
+  // Obliczenia (Derived State) - naprawia problem z persist
+  const { totalNetWorth, totalIncome, totalOutcome, profit } = useMemo(() => {
+    // 1. Net Worth
+    const walletsTotal = wallets.reduce((sum, wallet) => sum + wallet.balance, 0);
+    const assetsTotal = assets.reduce((sum, asset) => sum + asset.totalValue, 0);
+    const netWorth = walletsTotal + assetsTotal;
+
+    // 2. Income & Outcome (ostatnie 30 dni)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const income = transactions
+      .filter(t => t.type === 'income' && new Date(t.date) >= thirtyDaysAgo)
+      .reduce((sum, t) => sum + t.amount, 0);
+
+    const outcome = transactions
+      .filter(t => t.type === 'outcome' && new Date(t.date) >= thirtyDaysAgo)
+      .reduce((sum, t) => sum + Math.abs(t.amount), 0);
+
+    const currentProfit = income - outcome;
+
+    return { 
+      totalNetWorth: netWorth, 
+      totalIncome: income, 
+      totalOutcome: outcome,
+      profit: currentProfit
+    };
+  }, [wallets, transactions, assets]);
+
 
   return (
     <DashboardLayout>

@@ -1,4 +1,5 @@
 import { ReactNode } from 'react';
+import Link from 'next/link'; // Importujemy Link
 import { LayoutDashboard, TrendingUp, Wallet, Settings, Menu } from 'lucide-react';
 
 interface DashboardLayoutProps {
@@ -19,22 +20,22 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           </div>
           
           <nav className="space-y-2">
-            <a href="#" className="flex items-center gap-3 px-4 py-3 bg-purple-600/20 text-purple-400 rounded-lg border border-purple-500/30">
+            <Link href="/" className="flex items-center gap-3 px-4 py-3 bg-purple-600/20 text-purple-400 rounded-lg border border-purple-500/30">
               <LayoutDashboard className="w-5 h-5" />
               <span className="font-medium">Dashboard</span>
-            </a>
-            <a href="#" className="flex items-center gap-3 px-4 py-3 text-gray-400 hover:text-white hover:bg-gray-800/50 rounded-lg transition-colors">
+            </Link>
+            <Link href="/wallets" className="flex items-center gap-3 px-4 py-3 text-gray-400 hover:text-white hover:bg-gray-800/50 rounded-lg transition-colors">
               <Wallet className="w-5 h-5" />
               <span className="font-medium">Portfele</span>
-            </a>
-            <a href="#" className="flex items-center gap-3 px-4 py-3 text-gray-400 hover:text-white hover:bg-gray-800/50 rounded-lg transition-colors">
+            </Link>
+            <Link href="/investments" className="flex items-center gap-3 px-4 py-3 text-gray-400 hover:text-white hover:bg-gray-800/50 rounded-lg transition-colors">
               <TrendingUp className="w-5 h-5" />
               <span className="font-medium">Inwestycje</span>
-            </a>
-            <a href="#" className="flex items-center gap-3 px-4 py-3 text-gray-400 hover:text-white hover:bg-gray-800/50 rounded-lg transition-colors">
+            </Link>
+            <Link href="/settings" className="flex items-center gap-3 px-4 py-3 text-gray-400 hover:text-white hover:bg-gray-800/50 rounded-lg transition-colors">
               <Settings className="w-5 h-5" />
               <span className="font-medium">Ustawienia</span>
-            </a>
+            </Link>
           </nav>
         </div>
         
