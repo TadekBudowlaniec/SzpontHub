@@ -16,32 +16,44 @@ export async function getDashboardData() {
   const userId = await getUserId();
   if (!userId) return null;
 
-  const { data: wallets } = await supabaseAdmin
-    .from('Wallet')
+  const { data: wallets, error: walletsError } = await supabaseAdmin
+    .from('wallets')
     .select('*')
-    .eq('userId', userId);
+    .eq('user_id', userId);
 
-  const { data: transactionsRaw } = await supabaseAdmin
-    .from('Transaction')
+  if (walletsError) {
+    console.error('Error fetching wallets:', walletsError);
+  }
+
+  const { data: transactionsRaw, error: transError } = await supabaseAdmin
+    .from('transactions')
     .select(`
       *,
-      wallet:Wallet(name)
+      wallet:wallets(name)
     `)
-    .in('walletId', (wallets || []).map(w => w.id))
+    .in('wallet_id', (wallets || []).map(w => w.id))
     .order('date', { ascending: false });
+
+  if (transError) {
+    console.error('Error fetching transactions:', transError);
+  }
 
   const transactions = (transactionsRaw || []).map(t => ({
     ...t,
-    date: t.date.split('T')[0],
+    date: t.date?.split('T')[0] || '',
     walletName: t.wallet?.name || '',
-    wallet: t.walletId,
+    wallet: t.wallet_id,
     type: t.type as 'income' | 'outcome'
   }));
 
-  const { data: assets } = await supabaseAdmin
-    .from('Asset')
+  const { data: assets, error: assetsError } = await supabaseAdmin
+    .from('assets')
     .select('*')
-    .eq('userId', userId);
+    .eq('user_id', userId);
+
+  if (assetsError) {
+    console.error('Error fetching assets:', assetsError);
+  }
 
   return { wallets: wallets || [], transactions, assets: assets || [] };
 }
@@ -53,31 +65,40 @@ export async function addTransactionAction(data: any) {
   if (!userId) throw new Error("Unauthorized");
 
   // 1. Pobierz portfel
-  const { data: wallet } = await supabaseAdmin
-    .from('Wallet')
+  const { data: wallet, error: walletError } = await supabaseAdmin
+    .from('wallets')
     .select('*')
     .eq('id', data.wallet)
-    .eq('userId', userId)
+    .eq('user_id', userId)
     .single();
 
-  if (!wallet) throw new Error("Wallet not found");
+  if (walletError || !wallet) {
+    console.error('Error finding wallet:', walletError);
+    throw new Error("Wallet not found");
+  }
 
   // 2. Dodaj transakcję
-  await supabaseAdmin
-    .from('Transaction')
+  const { error: insertError } = await supabaseAdmin
+    .from('transactions')
     .insert({
+      id: nanoid(),
       amount: data.amount,
       category: data.category,
       description: data.description,
       type: data.type,
       date: data.date,
-      walletId: data.wallet,
-      createdAt: new Date().toISOString()
+      wallet_id: data.wallet,
+      created_at: new Date().toISOString()
     });
+
+  if (insertError) {
+    console.error('Error adding transaction:', insertError);
+    throw new Error(insertError.message);
+  }
 
   // 3. Zaktualizuj saldo
   await supabaseAdmin
-    .from('Wallet')
+    .from('wallets')
     .update({ balance: wallet.balance + data.amount })
     .eq('id', data.wallet);
 
@@ -89,21 +110,21 @@ export async function deleteTransactionAction(id: string) {
   if (!userId) throw new Error("Unauthorized");
 
   const { data: transaction } = await supabaseAdmin
-    .from('Transaction')
-    .select('*, wallet:Wallet(*)')
+    .from('transactions')
+    .select('*, wallet:wallets(*)')
     .eq('id', id)
     .single();
 
-  if (!transaction || transaction.wallet?.userId !== userId) return;
+  if (!transaction || transaction.wallet?.user_id !== userId) return;
 
   // Cofnij saldo
   await supabaseAdmin
-    .from('Wallet')
+    .from('wallets')
     .update({ balance: transaction.wallet.balance - transaction.amount })
-    .eq('id', transaction.walletId);
+    .eq('id', transaction.wallet_id);
 
   await supabaseAdmin
-    .from('Transaction')
+    .from('transactions')
     .delete()
     .eq('id', id);
 
@@ -115,42 +136,42 @@ export async function editTransactionAction(id: string, data: any) {
   if (!userId) throw new Error("Unauthorized");
 
   const { data: oldTransaction } = await supabaseAdmin
-    .from('Transaction')
-    .select('*, wallet:Wallet(*)')
+    .from('transactions')
+    .select('*, wallet:wallets(*)')
     .eq('id', id)
     .single();
 
-  if (!oldTransaction || oldTransaction.wallet?.userId !== userId) return;
+  if (!oldTransaction || oldTransaction.wallet?.user_id !== userId) return;
 
   // 1. Cofnij starą transakcję
   await supabaseAdmin
-    .from('Wallet')
+    .from('wallets')
     .update({ balance: oldTransaction.wallet.balance - oldTransaction.amount })
-    .eq('id', oldTransaction.walletId);
+    .eq('id', oldTransaction.wallet_id);
 
   // 2. Zaktualizuj transakcję
   await supabaseAdmin
-    .from('Transaction')
+    .from('transactions')
     .update({
       amount: data.amount,
       category: data.category,
       description: data.description,
       type: data.type,
       date: data.date,
-      walletId: data.wallet
+      wallet_id: data.wallet
     })
     .eq('id', id);
 
   // 3. Dodaj do nowego portfela
   const { data: newWallet } = await supabaseAdmin
-    .from('Wallet')
+    .from('wallets')
     .select('*')
     .eq('id', data.wallet)
     .single();
 
   if (newWallet) {
     await supabaseAdmin
-      .from('Wallet')
+      .from('wallets')
       .update({ balance: newWallet.balance + data.amount })
       .eq('id', newWallet.id);
   }
