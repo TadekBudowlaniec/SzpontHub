@@ -3,41 +3,40 @@ export interface User {
   email: string;
   name?: string | null;
   image?: string | null;
-  createdAt: string;
+  created_at: string;
 }
 
 export interface Wallet {
   id: string;
-  userId: string;
+  user_id: string;
   name: string;
   type: 'fiat' | 'crypto' | 'stock';
   balance: number;
   currency: string;
   color: string;
   icon: string;
-  createdAt: string;
+  created_at: string;
 }
 
 export interface Transaction {
   id: string;
-  walletId: string;
+  wallet_id: string;
   amount: number;
   type: 'income' | 'outcome';
   category: string;
   description?: string | null;
   date: string;
-  createdAt: string;
-  // Opcjonalne pole do joinów
-  wallet?: Wallet; 
+  created_at: string;
+  wallet?: Wallet; // opcjonalne do joinów
 }
 
 export interface Asset {
   id: string;
-  userId: string;
+  user_id: string;
   name: string;
   symbol: string;
   quantity: number;
-  currentPrice: number;
-  totalValue: number; // To obliczasz na froncie/back, w bazie może nie być
-  change24h: number;  // j.w.
+  current_price: number;
+  totalValue?: number;
+  change24h?: number;
 }

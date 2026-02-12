@@ -1,12 +1,10 @@
 import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { SupabaseAdapter } from "@auth/supabase-adapter";
-import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 
-// Używamy bezpośredniego zapytania HTTP do Supabase dla logowania, 
-// żeby nie importować klienta w tym pliku jeśli nie trzeba
 export const authOptions: NextAuthOptions = {
+  // To połączy NextAuth z tabelą 'users' w Supabase
   adapter: SupabaseAdapter({
     url: process.env.NEXT_PUBLIC_SUPABASE_URL!,
     secret: process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -20,37 +18,49 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
-          throw new Error("Invalid credentials");
+          throw new Error('Invalid credentials');
         }
 
-        // Musimy ręcznie sprawdzić użytkownika w bazie Supabase
-        // Używamy fetch, żeby nie tworzyć tutaj klienta
-        const response = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/User?email=eq.${credentials.email}&select=*`, {
+        // Pobieramy użytkownika bezpośrednio (Service Role bypassuje RLS)
+        const response = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/users?email=eq.${credentials.email}&select=*`, {
           headers: {
             apikey: process.env.SUPABASE_SERVICE_ROLE_KEY!,
-            Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY!}`
-          }
+            Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY!}`,
+          },
+          cache: 'no-store'
         });
 
         const users = await response.json();
         const user = users?.[0];
 
         if (!user || !user.password) {
-          throw new Error("Invalid credentials");
+          throw new Error('Invalid credentials');
         }
 
-        const isCorrectPassword = await bcrypt.compare(credentials.password, user.password);
+        const isCorrectPassword = await bcrypt.compare(
+          credentials.password,
+          user.password
+        );
 
         if (!isCorrectPassword) {
-          throw new Error("Invalid credentials");
+          throw new Error('Invalid credentials');
         }
 
-        return user;
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          image: user.image,
+        };
       }
     })
   ],
   session: {
-    strategy: "jwt"
+    strategy: "jwt",
+  },
+  secret: process.env.NEXTAUTH_SECRET,
+  pages: {
+    signIn: '/login',
   },
   callbacks: {
     async session({ session, token }) {
@@ -60,7 +70,5 @@ export const authOptions: NextAuthOptions = {
       }
       return session;
     }
-  },
-  secret: process.env.NEXTAUTH_SECRET,
-  debug: process.env.NODE_ENV === "development",
+  }
 };

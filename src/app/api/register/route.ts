@@ -1,13 +1,6 @@
 import { NextResponse } from "next/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import bcrypt from "bcryptjs";
-import { createClient } from "@supabase/supabase-js";
-
-// Tutaj musimy użyć service_role key, żeby móc utworzyć użytkownika
-// pomijając RLS (Row Level Security) jeśli jest włączone
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
 
 export async function POST(request: Request) {
   try {
@@ -15,30 +8,47 @@ export async function POST(request: Request) {
     const { email, name, password } = body;
 
     if (!email || !name || !password) {
-      return new NextResponse("Missing info", { status: 400 });
+      return new NextResponse("Brakujące dane", { status: 400 });
     }
 
     const hashedPassword = await bcrypt.hash(password, 12);
 
+    // 1. Sprawdź czy user istnieje
+    const { data: existingUser } = await supabaseAdmin
+        .from('users')
+        .select('id')
+        .eq('email', email)
+        .single();
+
+    if (existingUser) {
+        return new NextResponse("Email już istnieje", { status: 400 });
+    }
+
+    // 2. Utwórz usera w tabeli users (Nasza własna tabela)
     const { data, error } = await supabaseAdmin
-      .from('User')
+      .from("users")
       .insert({
+        // Generujemy ID lub pozwalamy bazie (jeśli używasz uuid)
+        // Lepiej użyć ID z Supabase Auth jeśli integrujesz, 
+        // ale przy Credentials Provider możemy generować własne:
+        id: crypto.randomUUID(), 
         email,
         name,
         password: hashedPassword,
-        image: '',
-        emailVerified: null
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
       })
       .select()
       .single();
 
     if (error) {
-      console.error(error);
-      return new NextResponse("User exists or error", { status: 500 });
+      console.error("Database error:", error);
+      return new NextResponse("Błąd bazy danych", { status: 500 });
     }
 
     return NextResponse.json(data);
   } catch (error: any) {
-    return new NextResponse("Internal Error", { status: 500 });
+    console.error("Registration error:", error);
+    return new NextResponse("Błąd serwera", { status: 500 });
   }
 }
