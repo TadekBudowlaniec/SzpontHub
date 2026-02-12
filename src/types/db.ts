@@ -3,7 +3,7 @@ export interface User {
   email: string;
   name?: string | null;
   image?: string | null;
-  created_at: string;
+  created_at?: string;
 }
 
 export interface Wallet {
@@ -15,7 +15,7 @@ export interface Wallet {
   currency: string;
   color: string;
   icon: string;
-  created_at: string;
+  created_at?: string;
 }
 
 export interface Transaction {
@@ -26,8 +26,7 @@ export interface Transaction {
   category: string;
   description?: string | null;
   date: string;
-  created_at: string;
-  wallet?: Wallet; // opcjonalne do joinów
+  created_at?: string;
 }
 
 export interface Asset {
@@ -36,7 +35,7 @@ export interface Asset {
   name: string;
   symbol: string;
   quantity: number;
-  current_price: number;
+  current_price: number; // Kluczowe: snake_case (tak jak w bazie)
   totalValue?: number;
   change24h?: number;
 }
