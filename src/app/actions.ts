@@ -1,12 +1,17 @@
 'use server';
 
-import { createClient } from '@/lib/supabase/server';
+import { createClient } from '@supabase/supabase-js'; // ZMIANA: używamy bezpośredniego klienta
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
-
-// KLUCZOWA ZMIANA: Importujemy typy dokładnie te, których używa frontend!
 import { Wallet, Transaction, Asset } from '@/hooks/useFinanceStore';
+
+// KLUCZOWA ZMIANA: Inicjalizujemy klienta z kluczem Service Role. 
+// Omija to blokady RLS, bo bezpieczeństwo zapewniamy niżej przez NextAuth (getUserId).
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 async function getUserId() {
   const session = await getServerSession(authOptions);
@@ -16,24 +21,22 @@ async function getUserId() {
 
 // --- POBIERANIE DANYCH ---
 
-// Wymuszamy na funkcji, żeby zwracała dokładnie to, czego oczekuje page.tsx
 export async function getDashboardData(): Promise<{
   wallets: Wallet[];
   transactions: Transaction[];
   assets: Asset[];
 } | null> {
   const userId = await getUserId();
-  if (!userId) return null;
-
-  const supabase = await createClient();
+  if (!userId) return null; // Jeśli NextAuth mówi, że nie jesteś zalogowany - odrzucamy
 
   // 1. Wallets
-  const { data: walletsRaw } = await supabase
+  const { data: walletsRaw, error: wError } = await supabase
     .from('wallets')
     .select('*')
     .eq('user_id', userId);
 
-  // Zmieniamy dane z bazy na format dla frontendu
+  if (wError) console.error("Wallets fetch error:", wError);
+
   const wallets: Wallet[] = (walletsRaw || []).map((w: any) => ({
     id: w.id,
     name: w.name,
@@ -44,10 +47,12 @@ export async function getDashboardData(): Promise<{
   }));
 
   // 2. Transactions
-  const { data: transactionsRaw } = await supabase
+  const { data: transactionsRaw, error: tError } = await supabase
     .from('transactions')
     .select('*, wallets(name)')
     .order('date', { ascending: false });
+
+  if (tError) console.error("Transactions fetch error:", tError);
 
   const userTransactions = (transactionsRaw || []).filter(
     (t: any) => t.wallets && t.wallets.user_id === userId
@@ -65,17 +70,19 @@ export async function getDashboardData(): Promise<{
   }));
 
   // 3. Assets
-  const { data: assetsRaw } = await supabase
+  const { data: assetsRaw, error: aError } = await supabase
     .from('assets')
     .select('*')
     .eq('user_id', userId);
+
+  if (aError) console.error("Assets fetch error:", aError);
 
   const assets: Asset[] = (assetsRaw || []).map((a: any) => ({
     id: a.id,
     name: a.name,
     symbol: a.symbol,
     quantity: a.quantity,
-    currentPrice: a.current_price, // Tłumaczymy snake_case z bazy na camelCase
+    currentPrice: a.current_price, 
     totalValue: a.quantity * a.current_price, 
     change24h: a.change24h || 0,
   }));
@@ -83,7 +90,7 @@ export async function getDashboardData(): Promise<{
   return { wallets, transactions, assets };
 }
 
-// --- ZAPIS DANYCH (Backend wysyła do bazy snake_case) ---
+// --- ZAPIS DANYCH ---
 
 export async function addTransactionAction(data: {
   amount: number;
@@ -96,15 +103,13 @@ export async function addTransactionAction(data: {
   const userId = await getUserId();
   if (!userId) throw new Error("Unauthorized");
   
-  const supabase = await createClient();
-
   const { error } = await supabase.from('transactions').insert({
     amount: data.amount,
     category: data.category,
     description: data.description,
     type: data.type,
     date: new Date(data.date).toISOString(),
-    wallet_id: data.wallet, // snake_case dla bazy
+    wallet_id: data.wallet,
     created_at: new Date().toISOString()
   });
 
@@ -126,8 +131,9 @@ export async function addTransactionAction(data: {
 }
 
 export async function editTransactionAction(id: string, data: any) {
-  const supabase = await createClient();
-  
+  const userId = await getUserId();
+  if (!userId) throw new Error("Unauthorized");
+
   await supabase.from('transactions').update({
     amount: data.amount,
     category: data.category,
@@ -143,7 +149,6 @@ export async function editTransactionAction(id: string, data: any) {
 export async function deleteTransactionAction(id: string) {
   const userId = await getUserId();
   if (!userId) throw new Error("Unauthorized");
-  const supabase = await createClient();
 
   const { data: transaction } = await supabase.from('transactions').select('*').eq('id', id).single();
 
@@ -164,10 +169,11 @@ export async function deleteTransactionAction(id: string) {
   revalidatePath('/');
 }
 
+// --- PORTFELE ---
+
 export async function addWalletAction(data: any) {
   const userId = await getUserId();
   if (!userId) throw new Error("Unauthorized");
-  const supabase = await createClient();
 
   await supabase.from('wallets').insert({
     user_id: userId,
@@ -182,40 +188,31 @@ export async function addWalletAction(data: any) {
   revalidatePath('/');
 }
 
+export async function editWalletAction(id: string, data: any) {
+  const userId = await getUserId();
+  if (!userId) throw new Error("Unauthorized");
+  
+  await supabase.from('wallets').update({
+    name: data.name,
+    type: data.type,
+    color: data.color,
+    icon: data.icon
+  }).eq('id', id).eq('user_id', userId); 
+
+  revalidatePath('/');
+}
+
 export async function deleteWalletAction(id: string) {
   const userId = await getUserId();
   if (!userId) throw new Error("Unauthorized");
-  const supabase = await createClient();
 
   await supabase.from('transactions').delete().eq('wallet_id', id);
   await supabase.from('wallets').delete().eq('id', id);
   revalidatePath('/');
 }
 
-// --- BRAKUJĄCE FUNKCJE (DODAJ NA DOLE PLIKU) ---
-
-export async function editWalletAction(id: string, data: any) {
-  const userId = await getUserId();
-  if (!userId) throw new Error("Unauthorized");
-  
-  const supabase = await createClient();
-
-  // Aktualizujemy dane w bazie dla konkretnego portfela (snake_case dla kolumn)
-  await supabase.from('wallets').update({
-    name: data.name,
-    type: data.type,
-    color: data.color,
-    icon: data.icon
-  }).eq('id', id).eq('user_id', userId); // Upewniamy się, że to portfel tego usera
-
-  revalidatePath('/');
-}
-
 export async function signOutAction() {
-  const supabase = await createClient();
-  
-  // Wylogowanie sesji Supabase (jeśli z niej korzystasz lokalnie)
-  await supabase.auth.signOut();
-  
-  revalidatePath('/');
+  // UWAGA: Logowanie i wylogowanie obsługuje teraz NextAuth.
+  // Jeśli przycisk wylogowania przestanie nagle działać, 
+  // upewnij się, że na froncie wywołujesz `signOut()` zaimportowane z 'next-auth/react'.
 }

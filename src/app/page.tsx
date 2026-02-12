@@ -1,18 +1,19 @@
-import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { getDashboardData } from "./actions";
 import { DashboardClient } from "@/components/DashboardClient";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
 export default async function Home() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  // POPRAWKA: Używamy NextAuth do sprawdzenia sesji, a nie supabase.auth!
+  const session = await getServerSession(authOptions);
 
-  if (!user) {
+  if (!session || !session.user) {
     redirect("/login");
   }
 
   const data = await getDashboardData();
-  const userName = user.user_metadata?.name || user.email?.split('@')[0] || 'Użytkownik';
+  const userName = session.user.name || session.user.email?.split('@')[0] || 'Użytkownik';
 
   if (!data) {
     return (
