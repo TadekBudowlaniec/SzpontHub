@@ -1,13 +1,18 @@
+'use client'; // <--- WAŻNE!
+
 import { ReactNode } from 'react';
 import Link from 'next/link';
-import { LayoutDashboard, TrendingUp, Wallet, Menu } from 'lucide-react';
+import { LayoutDashboard, TrendingUp, Wallet, Menu, LogOut } from 'lucide-react';
+import { useSession, signOut } from 'next-auth/react'; // <--- Import
 
 interface DashboardLayoutProps {
   children: ReactNode;
 }
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
-  // Zaktualizowane Logo
+  const { data: session } = useSession(); // <--- Pobierz dane sesji
+
+  // Logo component
   const Logo = () => (
     <div className="flex items-center font-extrabold text-xl tracking-tight">
       <span className="text-emerald-400 text-2xl">$</span>
@@ -20,7 +25,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-900 to-gray-900">
       {/* Sidebar */}
       <aside className="fixed left-0 top-0 h-full w-64 bg-gray-900/50 backdrop-blur-xl border-r border-gray-800 z-50 hidden lg:block">
-        <div className="p-6">
+        <div className="p-6 h-full flex flex-col">
           <div className="flex items-center gap-3 mb-8">
             <div className="w-10 h-10 bg-gradient-to-br from-emerald-600/20 to-purple-600/20 border border-emerald-500/30 rounded-lg flex items-center justify-center shadow-lg shadow-emerald-900/20">
               <TrendingUp className="w-6 h-6 text-emerald-400" />
@@ -28,7 +33,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             <Logo />
           </div>
           
-          <nav className="space-y-2">
+          <nav className="space-y-2 flex-1">
             <Link href="/" className="flex items-center gap-3 px-4 py-3 bg-purple-600/20 text-purple-400 rounded-lg border border-purple-500/30">
               <LayoutDashboard className="w-5 h-5" />
               <span className="font-medium">Dashboard</span>
@@ -44,17 +49,33 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               <span className="font-medium">Inwestycje</span>
             </Link>
           </nav>
-        </div>
         
-        <div className="absolute bottom-0 left-0 right-0 p-6 border-t border-gray-800">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-full flex items-center justify-center text-white font-bold shadow-lg">
-              JK
-            </div>
-            <div>
-              <p className="text-sm font-medium text-white">Jan Kowalski</p>
-              <p className="text-xs text-gray-400">jan@example.com</p>
-            </div>
+          {/* Sekcja użytkownika na dole */}
+          <div className="pt-6 border-t border-gray-800">
+            {session ? (
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-3 overflow-hidden">
+                  <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-full flex items-center justify-center text-white font-bold shadow-lg flex-shrink-0">
+                    {session.user?.name ? session.user.name[0].toUpperCase() : 'U'}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-white truncate">{session.user?.name || 'Użytkownik'}</p>
+                    <p className="text-xs text-gray-400 truncate">{session.user?.email}</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => signOut()} 
+                  className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                  title="Wyloguj"
+                >
+                  <LogOut className="w-5 h-5" />
+                </button>
+              </div>
+            ) : (
+              <Link href="/login" className="flex items-center justify-center gap-2 w-full py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors">
+                Zaloguj się
+              </Link>
+            )}
           </div>
         </div>
       </aside>
@@ -67,6 +88,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           </button>
           <Logo />
         </div>
+        {/* Mobile logout/login */}
+        {session ? (
+           <button onClick={() => signOut()} className="p-2 text-gray-400">
+             <LogOut className="w-6 h-6" />
+           </button>
+        ) : (
+           <Link href="/login" className="text-sm font-medium text-purple-400">Login</Link>
+        )}
       </header>
 
       {/* Main Content */}

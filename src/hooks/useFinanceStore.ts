@@ -49,10 +49,10 @@ interface FinanceState {
   updateAsset: (id: string, updates: Partial<Asset>) => void;
 }
 
-// Mock Data
+// Zmieniono początkowy balans na 0, aby saldo wynikało z transakcji
 const mockWallets: Wallet[] = [
-  { id: '1', name: 'Gotówka', balance: 5420.50, icon: '💵', color: 'from-green-500 to-emerald-600', type: 'fiat' },
-  { id: '2', name: 'Konto Bankowe', balance: 45230.75, icon: '🏦', color: 'from-blue-500 to-cyan-600', type: 'fiat' },
+  { id: '1', name: 'Gotówka', balance: 0, icon: '💵', color: 'from-green-500 to-emerald-600', type: 'fiat' },
+  { id: '2', name: 'Konto Bankowe', balance: 0, icon: '🏦', color: 'from-blue-500 to-cyan-600', type: 'fiat' },
 ];
 
 export const useFinanceStore = create<FinanceState>()(
@@ -82,7 +82,8 @@ export const useFinanceStore = create<FinanceState>()(
         const newTransaction = { ...transaction, id: Date.now().toString() };
         
         set((state) => {
-          // Aktualizuj saldo portfela: Po prostu dodaj kwotę (ujemną dla wydatku, dodatnią dla przychodu)
+          // Aktualizuj saldo portfela
+          // transaction.amount jest teraz ujemny dla wydatków, więc zwykłe dodawanie działa poprawnie (50 + (-20) = 30)
           const updatedWallets = state.wallets.map(w => {
             if (w.id === transaction.wallet) {
               return { ...w, balance: w.balance + transaction.amount };
@@ -103,8 +104,8 @@ export const useFinanceStore = create<FinanceState>()(
         if (!transaction) return;
 
         set((state) => {
-          // Cofnij saldo: Odejmij kwotę transakcji. 
-          // Jeśli to był wydatek (-100), to balance - (-100) da balance + 100. Correct.
+          // Cofnij saldo: Odejmij kwotę transakcji.
+          // Jeśli usuwamy wydatek (-100), to: balance - (-100) = balance + 100. Pieniądze wracają na konto.
           const updatedWallets = state.wallets.map(w => {
             if (w.id === transaction.wallet) {
               return { ...w, balance: w.balance - transaction.amount };
@@ -128,12 +129,12 @@ export const useFinanceStore = create<FinanceState>()(
           const updatedWallets = state.wallets.map(w => {
             let newBalance = w.balance;
 
-            // 1. Cofnij starą transakcję (jeśli dotyczyła tego portfela)
+            // 1. Cofnij starą transakcję (odejmij jej wartość)
             if (w.id === oldTransaction.wallet) {
               newBalance -= oldTransaction.amount;
             }
 
-            // 2. Dodaj nową transakcję (jeśli dotyczy tego portfela)
+            // 2. Dodaj nową transakcję (dodaj jej wartość)
             if (w.id === updatedData.wallet) {
               newBalance += updatedData.amount;
             }

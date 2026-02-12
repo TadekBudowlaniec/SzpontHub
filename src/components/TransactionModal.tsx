@@ -7,7 +7,7 @@ import { useFinanceStore, Transaction } from '@/hooks/useFinanceStore';
 interface TransactionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  editingTransaction?: Transaction | null; // Opcjonalna transakcja do edycji
+  editingTransaction?: Transaction | null;
 }
 
 export function TransactionModal({ isOpen, onClose, editingTransaction }: TransactionModalProps) {
@@ -23,14 +23,14 @@ export function TransactionModal({ isOpen, onClose, editingTransaction }: Transa
   // Wypełnij formularz jeśli edytujemy
   useEffect(() => {
     if (editingTransaction) {
-      setAmount(editingTransaction.amount.toString());
+      // Używamy Math.abs, aby w polu edycji nie wyświetlał się minus (np. -50 -> 50)
+      setAmount(Math.abs(editingTransaction.amount).toString());
       setCategory(editingTransaction.category);
       setDescription(editingTransaction.description);
       setWalletId(editingTransaction.wallet);
       setDate(editingTransaction.date);
       setType(editingTransaction.type);
     } else {
-      // Reset jeśli dodajemy nowe
       setAmount('');
       setCategory('');
       setDescription('');
@@ -48,8 +48,12 @@ export function TransactionModal({ isOpen, onClose, editingTransaction }: Transa
 
     const selectedWallet = wallets.find(w => w.id === walletId);
     
+    // Kluczowa poprawka: Jeśli to wydatek, kwota musi być ujemna
+    const numericAmount = parseFloat(amount);
+    const finalAmount = type === 'outcome' ? -Math.abs(numericAmount) : Math.abs(numericAmount);
+    
     const transactionData = {
-      amount: parseFloat(amount),
+      amount: finalAmount,
       category,
       description,
       wallet: walletId,
@@ -147,7 +151,7 @@ export function TransactionModal({ isOpen, onClose, editingTransaction }: Transa
               className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white outline-none"
             >
               {wallets.map(wallet => (
-                <option key={wallet.id} value={wallet.id}>{wallet.name} ({wallet.balance} PLN)</option>
+                <option key={wallet.id} value={wallet.id}>{wallet.name} ({wallet.balance.toLocaleString('pl-PL')} PLN)</option>
               ))}
             </select>
           </div>
