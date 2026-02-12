@@ -3,8 +3,7 @@ import 'dotenv/config';
 
 export default defineConfig({
   datasource: {
+    // Zostawiamy tylko główny URL. To wystarczy, żeby build przeszedł.
     url: process.env.DATABASE_URL!,
-    // W Prisma 7 to pole nazywa się migrateUrl!
-    migrateUrl: process.env.DIRECT_URL!, 
   },
 });
