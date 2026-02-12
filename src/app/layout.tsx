@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { GeistSans } from "geist/font/sans";
+import { GeistMono } from "geist/font/mono";
 import "./globals.css";
-import { NextAuthProvider } from "@/providers/NextAuthProvider"; // <--- Import
-
-const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "$zpont Hub",
@@ -16,11 +14,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pl">
-      <body className={inter.className}>
-        <NextAuthProvider> {/* <--- Owiń dzieci providerem */}
-          {children}
-        </NextAuthProvider>
+    <html lang="pl" className={`${GeistSans.variable} ${GeistMono.variable} dark`}>
+      <body className="min-h-screen bg-background text-foreground font-sans antialiased">
+        {children}
       </body>
     </html>
   );

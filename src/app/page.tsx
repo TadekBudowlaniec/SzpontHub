@@ -1,24 +1,28 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { getDashboardData } from "./actions";
 import { DashboardClient } from "@/components/DashboardClient";
 
 export default async function Home() {
-  const session = await getServerSession(authOptions);
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
 
-  if (!session) {
-    redirect("/api/auth/signin");
+  if (!user) {
+    redirect("/login");
   }
 
   const data = await getDashboardData();
 
   if (!data) {
-    return <div className="text-white text-center mt-20">Ładowanie danych...</div>;
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-foreground text-center">Ładowanie danych...</div>
+      </div>
+    );
   }
 
   return (
-    <DashboardClient 
+    <DashboardClient
       initialWallets={data.wallets}
       initialTransactions={data.transactions}
       initialAssets={data.assets}
