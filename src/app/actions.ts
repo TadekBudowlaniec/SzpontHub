@@ -1,13 +1,12 @@
 'use server';
 
-import { createClient } from '@supabase/supabase-js'; // ZMIANA: używamy bezpośredniego klienta
-import { getServerSession } from 'next-auth';
+import { createClient } from '@supabase/supabase-js'; // Używamy bezpośredniego klienta
+import { getServerSession } from 'next-auth'; // Tego brakowało!
 import { authOptions } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
 import { Wallet, Transaction, Asset } from '@/hooks/useFinanceStore';
 
-// KLUCZOWA ZMIANA: Inicjalizujemy klienta z kluczem Service Role. 
-// Omija to blokady RLS, bo bezpieczeństwo zapewniamy niżej przez NextAuth (getUserId).
+// Inicjalizacja klienta Admina (Service Role) - to ominie problemy z sesją ciasteczek
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -15,7 +14,6 @@ const supabase = createClient(
 
 async function getUserId() {
   const session = await getServerSession(authOptions);
-  // @ts-ignore
   return session?.user?.id;
 }
 

@@ -1,14 +1,13 @@
 import { redirect } from "next/navigation";
 import { getDashboardData } from "./actions";
 import { DashboardClient } from "@/components/DashboardClient";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getServerSession } from "next-auth"; // Dodaj to
+import { authOptions } from "@/lib/auth"; // Dodaj to
 
 export default async function Home() {
-  // POPRAWKA: Używamy NextAuth do sprawdzenia sesji, a nie supabase.auth!
   const session = await getServerSession(authOptions);
 
-  if (!session || !session.user) {
+  if (!session) {
     redirect("/login");
   }
 
