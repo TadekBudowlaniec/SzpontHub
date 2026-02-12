@@ -11,16 +11,26 @@ import { TransactionModal } from '@/components/TransactionModal';
 import { WalletModal } from '@/components/WalletModal';
 import { useFinanceStore, Transaction, Wallet, Asset } from '@/hooks/useFinanceStore';
 import { TrendingUp, Wallet as WalletIcon, ArrowUpRight, ArrowDownRight, Plus, Filter } from 'lucide-react';
-import { subDays } from 'date-fns';
+import { subDays, format } from 'date-fns';
+import { pl } from 'date-fns/locale';
 import { deleteTransactionAction, deleteWalletAction } from '@/app/actions';
 
 interface Props {
   initialWallets: Wallet[];
   initialTransactions: Transaction[];
   initialAssets: Asset[];
+  userName: string;
 }
 
-export function DashboardClient({ initialWallets, initialTransactions, initialAssets }: Props) {
+function getGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour >= 5 && hour < 12) return 'Dzień dobry';
+  if (hour >= 12 && hour < 18) return 'Cześć';
+  if (hour >= 18 && hour < 22) return 'Dobry wieczór';
+  return 'Dobrej nocy';
+}
+
+export function DashboardClient({ initialWallets, initialTransactions, initialAssets, userName }: Props) {
   const [isTransModalOpen, setIsTransModalOpen] = useState(false);
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
@@ -73,23 +83,27 @@ export function DashboardClient({ initialWallets, initialTransactions, initialAs
 
   return (
     <DashboardLayout>
-      <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="mb-3 flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div>
           {activeWalletId ? (
-            <h1 className="text-3xl font-bold text-foreground mb-2">
-              Portfel: <span className="text-primary">{wallets.find(w => w.id === activeWalletId)?.name}</span>
-            </h1>
+            <>
+              <h1 className="text-3xl font-bold text-foreground mb-2">
+                Portfel: <span className="text-primary">{wallets.find(w => w.id === activeWalletId)?.name}</span>
+              </h1>
+              <button onClick={() => setActiveWallet(null)} className="text-primary hover:underline flex items-center gap-1 text-sm">
+                <Filter className="w-3 h-3"/> Wróć do przeglądu
+              </button>
+            </>
           ) : (
-            <h1 className="text-4xl font-extrabold text-foreground mb-2 flex items-center gap-1">
-              <span className="text-primary">$zpont</span>
-              <span className="text-primary">Hub</span>
-            </h1>
+            <>
+              <h1 className="text-5xl font-bold text-foreground mb-2">
+                {getGreeting()}, <span className="text-primary">{userName}</span>
+              </h1>
+              <p className="text-xl text-muted-foreground">
+                {format(new Date(), "EEEE, d MMMM yyyy", { locale: pl })}
+              </p>
+            </>
           )}
-          <p className="text-muted-foreground">
-            {activeWalletId
-              ? <button onClick={() => setActiveWallet(null)} className="text-primary hover:underline flex items-center gap-1"><Filter className="w-3 h-3"/> Wróć</button>
-              : 'Twoje finanse'}
-          </p>
         </div>
         <div className="flex gap-2">
           <button
@@ -108,50 +122,50 @@ export function DashboardClient({ initialWallets, initialTransactions, initialAs
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <div className="bg-card border border-primary/30 rounded-xl p-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
+        <div className="bg-card border border-border rounded-xl p-6">
           <div className="flex items-center justify-between mb-2">
             <span className="text-muted-foreground text-sm">Saldo</span>
-            <WalletIcon className="w-5 h-5 text-primary" />
+            <WalletIcon className="w-5 h-5 text-foreground" />
           </div>
           <div className="text-3xl font-bold text-foreground">
             {stats.totalNetWorth.toLocaleString('pl-PL', { style: 'currency', currency: 'PLN' })}
           </div>
         </div>
 
-        <div className="bg-card border border-green-500/30 rounded-xl p-6">
+        <div className="bg-card border border-border rounded-xl p-6">
           <div className="flex items-center justify-between mb-2">
             <span className="text-muted-foreground text-sm">Przychody ({stats.periodLabel})</span>
             <ArrowUpRight className="w-5 h-5 text-green-500" />
           </div>
-          <div className="text-3xl font-bold text-foreground">
+          <div className="text-3xl font-bold text-green-500">
             {stats.totalIncome.toLocaleString('pl-PL', { style: 'currency', currency: 'PLN' })}
           </div>
         </div>
 
-        <div className="bg-card border border-red-500/30 rounded-xl p-6">
+        <div className="bg-card border border-border rounded-xl p-6">
           <div className="flex items-center justify-between mb-2">
             <span className="text-muted-foreground text-sm">Wydatki ({stats.periodLabel})</span>
             <ArrowDownRight className="w-5 h-5 text-red-500" />
           </div>
-          <div className="text-3xl font-bold text-foreground">
+          <div className="text-3xl font-bold text-red-500">
             {stats.totalOutcome.toLocaleString('pl-PL', { style: 'currency', currency: 'PLN' })}
           </div>
         </div>
 
-        <div className={`bg-card border ${stats.profit >= 0 ? 'border-cyan-500/30' : 'border-orange-500/30'} rounded-xl p-6`}>
+        <div className="bg-card border border-border rounded-xl p-6">
           <div className="flex items-center justify-between mb-2">
             <span className="text-muted-foreground text-sm">Bilans ({stats.periodLabel})</span>
-            <TrendingUp className={`w-5 h-5 ${stats.profit >= 0 ? 'text-cyan-500' : 'text-orange-500'}`} />
+            <TrendingUp className={`w-5 h-5 ${stats.profit >= 0 ? 'text-green-500' : 'text-red-500'}`} />
           </div>
-          <div className="text-3xl font-bold text-foreground">
+          <div className={`text-3xl font-bold ${stats.profit >= 0 ? 'text-green-500' : 'text-red-500'}`}>
             {stats.profit.toLocaleString('pl-PL', { style: 'currency', currency: 'PLN' })}
           </div>
         </div>
       </div>
 
       {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-3">
         <div className="lg:col-span-2 bg-card border border-border rounded-xl overflow-hidden">
           <FinancialChart transactions={filteredTransactions} range={range} setRange={setRange} />
         </div>
@@ -161,9 +175,9 @@ export function DashboardClient({ initialWallets, initialTransactions, initialAs
       </div>
 
       {/* Wallets */}
-      <div id="wallets" className="mb-8 scroll-mt-8">
-        <h2 className="text-2xl font-bold text-foreground mb-4">Portfele</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div id="wallets" className="mb-3 scroll-mt-3">
+        <h2 className="text-2xl font-bold text-foreground mb-3">Portfele</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
           {wallets.map((wallet) => (
             <div
               key={wallet.id}
@@ -181,7 +195,7 @@ export function DashboardClient({ initialWallets, initialTransactions, initialAs
       </div>
 
       {/* Assets & Transactions */}
-      <div id="assets" className="grid grid-cols-1 lg:grid-cols-2 gap-6 scroll-mt-8">
+      <div id="assets" className="grid grid-cols-1 lg:grid-cols-2 gap-3 scroll-mt-3">
         <div className="bg-card border border-border rounded-xl overflow-hidden">
           <AssetList assets={assets} />
         </div>

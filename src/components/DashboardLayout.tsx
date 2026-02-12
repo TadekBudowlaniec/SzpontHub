@@ -6,13 +6,12 @@ import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
   Wallet,
-  ArrowLeftRight,
   PiggyBank,
-  Settings,
   LogOut,
   TrendingUp
 } from 'lucide-react';
 import { signOutAction } from '@/app/actions';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -35,22 +34,22 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   return (
     <div className="min-h-screen bg-background">
       {/* Sidebar */}
-      <aside className="fixed left-0 top-0 z-40 h-screen w-64 bg-card border-r border-border hidden lg:block">
+      <aside className="fixed left-0 top-0 z-40 h-screen w-64 bg-sidebar border-r border-sidebar-border hidden lg:block">
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="p-6 border-b border-border">
-            <Link href="/" className="flex items-center gap-2">
+          <div className="p-6 border-b border-sidebar-border">
+            <Link href="/" className="flex items-center gap-3">
               <div className="w-10 h-10 bg-primary/20 border border-primary/30 rounded-xl flex items-center justify-center">
                 <TrendingUp className="w-5 h-5 text-primary" />
               </div>
-              <span className="text-xl font-bold text-foreground">
+              <span className="text-xl font-bold text-sidebar-foreground">
                 <span className="text-primary">$zpont</span>Hub
               </span>
             </Link>
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 p-4 space-y-2">
+          <nav className="flex-1 p-4 space-y-1">
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = pathname === item.href;
@@ -60,8 +59,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                   href={item.href}
                   className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
                     isActive
-                      ? 'bg-primary text-primary-foreground'
-                      : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                      ? 'bg-sidebar-primary text-sidebar-primary-foreground'
+                      : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
                   }`}
                 >
                   <Icon className="w-5 h-5" />
@@ -72,10 +71,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           </nav>
 
           {/* Bottom actions */}
-          <div className="p-4 border-t border-border space-y-2">
+          <div className="p-4 border-t border-sidebar-border space-y-2">
+            <div className="flex items-center justify-between px-2">
+              <span className="text-sm text-sidebar-foreground/70">Motyw</span>
+              <ThemeToggle />
+            </div>
             <button
               onClick={handleSignOut}
-              className="flex items-center gap-3 px-4 py-3 rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors w-full"
+              className="flex items-center gap-3 px-4 py-3 rounded-lg text-sidebar-foreground/70 hover:bg-destructive/10 hover:text-destructive transition-colors w-full"
             >
               <LogOut className="w-5 h-5" />
               Wyloguj się
@@ -93,12 +96,15 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               <span className="text-primary">$zpont</span>Hub
             </span>
           </Link>
-          <button
-            onClick={handleSignOut}
-            className="p-2 text-muted-foreground hover:text-destructive transition-colors"
-          >
-            <LogOut className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <button
+              onClick={handleSignOut}
+              className="p-2 text-muted-foreground hover:text-destructive transition-colors"
+            >
+              <LogOut className="w-5 h-5" />
+            </button>
+          </div>
         </div>
       </header>
 

@@ -13,21 +13,18 @@ interface FinancialChartProps {
 }
 
 export function FinancialChart({ transactions, range, setRange }: FinancialChartProps) {
-  
+
   const chartData = useMemo(() => {
     const days = range === '1W' ? 7 : range === '1M' ? 30 : range === '3M' ? 90 : 365;
     const data = [];
-    
+
     const today = new Date();
-    // Uproszczona logika: generujemy punkty na wykresie dla każdego dnia z zakresu
     for (let i = days; i >= 0; i--) {
       const date = subDays(today, i);
       const dateStr = format(date, 'yyyy-MM-dd');
-      
-      // Filtrujemy transakcje, które wydarzyły się DO tego dnia włącznie
-      // To pozwala pokazać skumulowaną wartość portfela w czasie
+
       const transactionsUntilNow = transactions.filter(t => new Date(t.date) <= date);
-      
+
       const balance = transactionsUntilNow.reduce((acc, t) => {
         return acc + t.amount;
       }, 0);
@@ -43,18 +40,18 @@ export function FinancialChart({ transactions, range, setRange }: FinancialChart
   }, [transactions, range]);
 
   return (
-    <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-6 backdrop-blur-sm h-[400px]">
+    <div className="p-6">
       <div className="flex items-center justify-between mb-6">
-        <h3 className="text-xl font-bold text-white">Wartość Portfela (Historia)</h3>
-        <div className="flex gap-2 bg-gray-800 rounded-lg p-1">
+        <h3 className="text-xl font-bold text-card-foreground">Wartość Portfela</h3>
+        <div className="flex gap-1 bg-secondary rounded-lg p-1">
           {(['1W', '1M', '3M', '1Y'] as const).map((r) => (
             <button
               key={r}
               onClick={() => setRange(r)}
-              className={`px-3 py-1 text-sm rounded-md transition-all ${
-                range === r 
-                  ? 'bg-purple-600 text-white shadow-lg' 
-                  : 'text-gray-400 hover:text-white'
+              className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                range === r
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:text-card-foreground'
               }`}
             >
               {r}
@@ -63,43 +60,48 @@ export function FinancialChart({ transactions, range, setRange }: FinancialChart
         </div>
       </div>
 
-      <ResponsiveContainer width="100%" height="100%">
+      <ResponsiveContainer width="100%" height={300}>
         <AreaChart data={chartData}>
           <defs>
             <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3}/>
-              <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
+              <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.3}/>
+              <stop offset="95%" stopColor="var(--primary)" stopOpacity={0}/>
             </linearGradient>
           </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="#374151" vertical={false} />
-          <XAxis 
-            dataKey="date" 
-            stroke="#9ca3af" 
-            tick={{ fill: '#9ca3af', fontSize: 12 }} 
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+          <XAxis
+            dataKey="date"
+            stroke="var(--muted-foreground)"
+            tick={{ fill: 'var(--muted-foreground)', fontSize: 12 }}
             axisLine={false}
             tickLine={false}
             minTickGap={30}
           />
-          <YAxis 
-            stroke="#9ca3af" 
-            tick={{ fill: '#9ca3af', fontSize: 12 }} 
+          <YAxis
+            stroke="var(--muted-foreground)"
+            tick={{ fill: 'var(--muted-foreground)', fontSize: 12 }}
             axisLine={false}
             tickLine={false}
             tickFormatter={(value) => `${(value / 1000).toFixed(1)}k`}
           />
-          <Tooltip 
-            contentStyle={{ backgroundColor: '#111827', borderColor: '#374151', borderRadius: '0.5rem' }}
-            itemStyle={{ color: '#fff' }}
+          <Tooltip
+            contentStyle={{
+              backgroundColor: 'var(--card)',
+              borderColor: 'var(--border)',
+              borderRadius: '0.5rem',
+              color: 'var(--card-foreground)'
+            }}
+            itemStyle={{ color: 'var(--card-foreground)' }}
             formatter={(value: number) => [`${value.toLocaleString('pl-PL', { minimumFractionDigits: 2 })} PLN`, 'Wartość']}
-            labelStyle={{ color: '#9ca3af' }}
+            labelStyle={{ color: 'var(--muted-foreground)' }}
           />
-          <Area 
-            type="monotone" 
-            dataKey="value" 
-            stroke="#8b5cf6" 
+          <Area
+            type="monotone"
+            dataKey="value"
+            stroke="var(--primary)"
             strokeWidth={2}
-            fillOpacity={1} 
-            fill="url(#colorValue)" 
+            fillOpacity={1}
+            fill="url(#colorValue)"
           />
         </AreaChart>
       </ResponsiveContainer>

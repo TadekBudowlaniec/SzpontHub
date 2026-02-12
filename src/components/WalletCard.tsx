@@ -1,5 +1,14 @@
 import { Wallet } from '@/hooks/useFinanceStore';
-import { Edit2, Trash2 } from 'lucide-react';
+import { Edit2, Trash2, Banknote, Bitcoin, TrendingUp, Wallet as WalletIcon, CreditCard, PiggyBank } from 'lucide-react';
+
+const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+  banknote: Banknote,
+  bitcoin: Bitcoin,
+  trending: TrendingUp,
+  wallet: WalletIcon,
+  card: CreditCard,
+  piggy: PiggyBank,
+};
 
 interface WalletCardProps {
   wallet: Wallet;
@@ -37,8 +46,11 @@ export function WalletCard({ wallet, onEdit, onDelete }: WalletCardProps) {
 
       <div className="relative z-10">
         <div className="mb-4 flex items-center justify-between">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/20 backdrop-blur-sm text-xl">
-            {wallet.icon}
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/20 backdrop-blur-sm">
+            {(() => {
+              const IconComponent = iconMap[wallet.icon] || WalletIcon;
+              return <IconComponent className="w-5 h-5 text-white" />;
+            })()}
           </div>
           <span className="text-xs font-medium text-white/80 uppercase tracking-wider bg-black/10 px-2 py-1 rounded-md">
             {wallet.type}

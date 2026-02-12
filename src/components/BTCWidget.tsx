@@ -8,54 +8,67 @@ interface BTCData {
   price: number;
   change24h: number;
   sparkline: number[];
+  high24h: number;
+  low24h: number;
 }
 
 export function BTCWidget() {
   const [btcData, setBtcData] = useState<BTCData>({
-    price: 380420,
-    change24h: 3.24,
-    sparkline: [372000, 375000, 373500, 378000, 376500, 380000, 379000, 381000, 380420],
+    price: 0,
+    change24h: 0,
+    sparkline: [],
+    high24h: 0,
+    low24h: 0,
   });
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchBTCPrice = async () => {
       try {
         setLoading(true);
-        const response = await fetch(
-          'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=pln&include_24hr_change=true'
+
+        // Fetch market chart data for last 24h (real sparkline)
+        const chartResponse = await fetch(
+          'https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=pln&days=1'
         );
-        
-        if (response.ok) {
-          const data = await response.json();
-          if (data.bitcoin) {
-            // Generate mock sparkline based on current price
-            const currentPrice = data.bitcoin.pln;
-            const change = data.bitcoin.pln_24h_change || 0;
-            const sparkline = [];
-            for (let i = 0; i < 9; i++) {
-              const variance = (Math.random() - 0.5) * currentPrice * 0.02;
-              sparkline.push(currentPrice + variance);
-            }
-            sparkline[sparkline.length - 1] = currentPrice;
-            
+
+        if (chartResponse.ok) {
+          const chartData = await chartResponse.json();
+          const prices = chartData.prices as [number, number][];
+
+          if (prices && prices.length > 0) {
+            // Get sparkline - sample every ~2 hours (24 points from ~288)
+            const step = Math.floor(prices.length / 24);
+            const sparkline = prices
+              .filter((_, i) => i % step === 0 || i === prices.length - 1)
+              .map(p => p[1]);
+
+            const currentPrice = prices[prices.length - 1][1];
+            const price24hAgo = prices[0][1];
+            const change24h = ((currentPrice - price24hAgo) / price24hAgo) * 100;
+
+            const allPrices = prices.map(p => p[1]);
+            const high24h = Math.max(...allPrices);
+            const low24h = Math.min(...allPrices);
+
             setBtcData({
               price: currentPrice,
-              change24h: change,
+              change24h,
               sparkline,
+              high24h,
+              low24h,
             });
           }
         }
       } catch (error) {
         console.error('Error fetching BTC price:', error);
-        // Keep mock data on error
       } finally {
         setLoading(false);
       }
     };
 
     fetchBTCPrice();
-    const interval = setInterval(fetchBTCPrice, 60000); // Update every minute
+    const interval = setInterval(fetchBTCPrice, 60000);
 
     return () => clearInterval(interval);
   }, []);
@@ -64,18 +77,15 @@ export function BTCWidget() {
   const chartData = btcData.sparkline.map((price, index) => ({ value: price, index }));
 
   return (
-    <div className="bg-gradient-to-br from-orange-600/20 to-amber-900/20 backdrop-blur-sm border border-orange-500/30 rounded-xl p-6 h-full flex flex-col">
+    <div className="p-6 h-full flex flex-col">
       <div className="flex items-start justify-between mb-4">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-3xl">₿</span>
-            <h3 className="text-lg font-bold text-white">BTC/PLN</h3>
-          </div>
-          {loading && <p className="text-xs text-gray-400">Aktualizacja...</p>}
+          <h3 className="text-lg font-bold text-card-foreground mb-1">BTC/PLN</h3>
+          {loading && <p className="text-xs text-muted-foreground">Aktualizacja...</p>}
         </div>
-        
+
         <div className={`flex items-center gap-1 px-2 py-1 rounded-lg ${
-          isPositive ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
+          isPositive ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500'
         }`}>
           {isPositive ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
           <span className="text-sm font-medium">{Math.abs(btcData.change24h).toFixed(2)}%</span>
@@ -83,43 +93,49 @@ export function BTCWidget() {
       </div>
 
       <div className="mb-4">
-        <p className="text-3xl font-bold text-white mb-1">
-          {btcData.price.toLocaleString('pl-PL', { 
-            style: 'currency', 
+        <p className="text-3xl font-bold text-card-foreground mb-1">
+          {btcData.price.toLocaleString('pl-PL', {
+            style: 'currency',
             currency: 'PLN',
-            maximumFractionDigits: 0 
+            maximumFractionDigits: 0
           })}
         </p>
-        <p className="text-sm text-gray-400">Aktualny kurs</p>
+        <p className="text-sm text-muted-foreground">Aktualny kurs</p>
       </div>
 
       <div className="flex-1 min-h-[120px]">
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={chartData}>
-            <YAxis domain={['dataMin', 'dataMax']} hide />
-            <Line 
-              type="monotone" 
-              dataKey="value" 
-              stroke={isPositive ? '#10b981' : '#ef4444'} 
-              strokeWidth={2}
-              dot={false}
-            />
-          </LineChart>
-        </ResponsiveContainer>
+        {chartData.length > 0 ? (
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={chartData}>
+              <YAxis domain={['dataMin', 'dataMax']} hide />
+              <Line
+                type="monotone"
+                dataKey="value"
+                stroke={isPositive ? '#22c55e' : '#ef4444'}
+                strokeWidth={2}
+                dot={false}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        ) : (
+          <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
+            Ładowanie wykresu...
+          </div>
+        )}
       </div>
 
-      <div className="mt-4 pt-4 border-t border-orange-500/20">
+      <div className="mt-4 pt-4 border-t border-border">
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
-            <p className="text-gray-400 mb-1">24h High</p>
-            <p className="text-white font-medium">
-              {Math.max(...btcData.sparkline).toLocaleString('pl-PL', { maximumFractionDigits: 0 })} PLN
+            <p className="text-muted-foreground mb-1">24h High</p>
+            <p className="text-card-foreground font-medium">
+              {btcData.high24h.toLocaleString('pl-PL', { maximumFractionDigits: 0 })} PLN
             </p>
           </div>
           <div>
-            <p className="text-gray-400 mb-1">24h Low</p>
-            <p className="text-white font-medium">
-              {Math.min(...btcData.sparkline).toLocaleString('pl-PL', { maximumFractionDigits: 0 })} PLN
+            <p className="text-muted-foreground mb-1">24h Low</p>
+            <p className="text-card-foreground font-medium">
+              {btcData.low24h.toLocaleString('pl-PL', { maximumFractionDigits: 0 })} PLN
             </p>
           </div>
         </div>

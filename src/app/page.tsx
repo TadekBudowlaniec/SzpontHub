@@ -12,6 +12,7 @@ export default async function Home() {
   }
 
   const data = await getDashboardData();
+  const userName = user.user_metadata?.name || user.email?.split('@')[0] || 'Użytkownik';
 
   if (!data) {
     return (
@@ -26,6 +27,7 @@ export default async function Home() {
       initialWallets={data.wallets}
       initialTransactions={data.transactions}
       initialAssets={data.assets}
+      userName={userName}
     />
   );
 }

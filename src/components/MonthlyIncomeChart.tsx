@@ -15,23 +15,23 @@ export function MonthlyIncomeChart() {
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-gray-900/95 border border-gray-700 rounded-lg p-3 backdrop-blur-sm">
-          <p className="text-gray-400 text-sm mb-2">{payload[0].payload.month}</p>
+        <div className="bg-card border border-border rounded-lg p-3 backdrop-blur-sm">
+          <p className="text-muted-foreground text-sm mb-2">{payload[0].payload.month}</p>
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-              <p className="text-green-400 text-sm">
+              <p className="text-green-500 text-sm">
                 Przychody: {payload[0].value.toLocaleString('pl-PL')} PLN
               </p>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-              <p className="text-red-400 text-sm">
+              <p className="text-red-500 text-sm">
                 Wydatki: {payload[1].value.toLocaleString('pl-PL')} PLN
               </p>
             </div>
-            <div className="border-t border-gray-700 mt-2 pt-2">
-              <p className="text-white font-medium text-sm">
+            <div className="border-t border-border mt-2 pt-2">
+              <p className="text-card-foreground font-medium text-sm">
                 Zysk: {(payload[0].value - payload[1].value).toLocaleString('pl-PL')} PLN
               </p>
             </div>
@@ -43,46 +43,48 @@ export function MonthlyIncomeChart() {
   };
 
   return (
-    <div className="bg-gray-900/50 backdrop-blur-sm border border-gray-800 rounded-xl p-6">
+    <div className="p-6">
       <div className="mb-6">
-        <h2 className="text-xl font-bold text-white mb-1">Miesięczny Cashflow</h2>
-        <p className="text-gray-400 text-sm">Porównanie przychodów i wydatków</p>
+        <h2 className="text-xl font-bold text-card-foreground mb-1">Miesięczny Cashflow</h2>
+        <p className="text-muted-foreground text-sm">Porównanie przychodów i wydatków</p>
       </div>
 
       <ResponsiveContainer width="100%" height={300}>
         <BarChart data={monthlyData}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.3} />
-          <XAxis 
-            dataKey="month" 
-            stroke="#9ca3af" 
-            style={{ fontSize: '12px' }}
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+          <XAxis
+            dataKey="month"
+            stroke="var(--muted-foreground)"
+            tick={{ fill: 'var(--muted-foreground)', fontSize: 12 }}
+            axisLine={false}
             tickLine={false}
           />
-          <YAxis 
-            stroke="#9ca3af" 
-            style={{ fontSize: '12px' }}
+          <YAxis
+            stroke="var(--muted-foreground)"
+            tick={{ fill: 'var(--muted-foreground)', fontSize: 12 }}
             tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
+            axisLine={false}
             tickLine={false}
           />
           <Tooltip content={<CustomTooltip />} />
-          <Legend 
+          <Legend
             wrapperStyle={{ paddingTop: '20px' }}
             iconType="circle"
             formatter={(value) => (
-              <span className="text-gray-400 text-sm">
+              <span className="text-muted-foreground text-sm">
                 {value === 'income' ? 'Przychody' : 'Wydatki'}
               </span>
             )}
           />
-          <Bar 
-            dataKey="income" 
-            fill="#10b981" 
+          <Bar
+            dataKey="income"
+            fill="#22c55e"
             radius={[8, 8, 0, 0]}
             name="income"
           />
-          <Bar 
-            dataKey="outcome" 
-            fill="#ef4444" 
+          <Bar
+            dataKey="outcome"
+            fill="#ef4444"
             radius={[8, 8, 0, 0]}
             name="outcome"
           />

@@ -1,5 +1,44 @@
 import { Asset } from '@/hooks/useFinanceStore';
-import { TrendingUp, TrendingDown } from 'lucide-react';
+import { TrendingUp, TrendingDown, Coins } from 'lucide-react';
+import {
+  TokenBTC,
+  TokenETH,
+  TokenSOL,
+  TokenBNB,
+  TokenXRP,
+  TokenADA,
+  TokenDOGE,
+  TokenDOT,
+  TokenMATIC,
+  TokenLTC,
+  TokenAVAX,
+  TokenLINK,
+  TokenUNI,
+  TokenATOM,
+  TokenXLM,
+  TokenUSDT,
+  TokenUSDC,
+} from '@token-icons/react';
+
+const cryptoIconMap: Record<string, React.ComponentType<{ size?: number; variant?: 'branded' | 'mono' }>> = {
+  BTC: TokenBTC,
+  ETH: TokenETH,
+  SOL: TokenSOL,
+  BNB: TokenBNB,
+  XRP: TokenXRP,
+  ADA: TokenADA,
+  DOGE: TokenDOGE,
+  DOT: TokenDOT,
+  MATIC: TokenMATIC,
+  LTC: TokenLTC,
+  AVAX: TokenAVAX,
+  LINK: TokenLINK,
+  UNI: TokenUNI,
+  ATOM: TokenATOM,
+  XLM: TokenXLM,
+  USDT: TokenUSDT,
+  USDC: TokenUSDC,
+};
 
 interface AssetListProps {
   assets: Asset[];
@@ -9,77 +48,92 @@ export function AssetList({ assets }: AssetListProps) {
   const totalValue = assets.reduce((sum, asset) => sum + asset.totalValue, 0);
 
   return (
-    <div className="bg-gray-900/50 backdrop-blur-sm border border-gray-800 rounded-xl p-6">
+    <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-xl font-bold text-white mb-1">Aktywa</h2>
-          <p className="text-gray-400 text-sm">Portfel inwestycyjny</p>
+          <h2 className="text-xl font-bold text-card-foreground mb-1">Aktywa</h2>
+          <p className="text-muted-foreground text-sm">Portfel inwestycyjny</p>
         </div>
         <div className="text-right">
-          <p className="text-sm text-gray-400">Całkowita wartość</p>
-          <p className="text-2xl font-bold text-white">
+          <p className="text-sm text-muted-foreground">Całkowita wartość</p>
+          <p className="text-2xl font-bold text-card-foreground">
             {totalValue.toLocaleString('pl-PL', { style: 'currency', currency: 'PLN' })}
           </p>
         </div>
       </div>
 
       <div className="space-y-3">
-        {assets.map((asset) => {
-          const isPositive = asset.change24h >= 0;
-          
-          return (
-            <div 
-              key={asset.id}
-              className="p-4 bg-gray-800/30 rounded-lg border border-gray-700/50 hover:bg-gray-800/50 transition-colors"
-            >
-              <div className="flex items-center justify-between mb-3">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-white font-medium">{asset.name}</h3>
-                    <span className="text-xs text-gray-500 bg-gray-700/50 px-2 py-0.5 rounded">
-                      {asset.symbol}
-                    </span>
+        {assets.length === 0 ? (
+          <p className="text-muted-foreground text-center py-8">Brak aktywów</p>
+        ) : (
+          assets.map((asset) => {
+            const isPositive = asset.change24h >= 0;
+
+            return (
+              <div
+                key={asset.id}
+                className="p-4 bg-muted/50 rounded-lg border border-border hover:bg-muted transition-colors"
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
+                      {(() => {
+                        const IconComponent = cryptoIconMap[asset.symbol.toUpperCase()];
+                        if (IconComponent) {
+                          return <IconComponent size={24} variant="branded" />;
+                        }
+                        return <Coins className="w-5 h-5 text-muted-foreground" />;
+                      })()}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-card-foreground font-medium">{asset.name}</h3>
+                        <span className="text-xs text-muted-foreground bg-secondary px-2 py-0.5 rounded">
+                          {asset.symbol}
+                        </span>
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-0.5">
+                        {asset.quantity} × {asset.currentPrice.toLocaleString('pl-PL')} PLN
+                      </p>
+                    </div>
                   </div>
-                  <p className="text-sm text-gray-400 mt-1">
-                    {asset.quantity} × {asset.currentPrice.toLocaleString('pl-PL')} PLN
-                  </p>
+
+                  <div className="text-right">
+                    <p className="text-lg font-bold text-card-foreground">
+                      {asset.totalValue.toLocaleString('pl-PL', { style: 'currency', currency: 'PLN' })}
+                    </p>
+                    <div className={`flex items-center justify-end gap-1 mt-1 ${
+                      isPositive ? 'text-green-500' : 'text-red-500'
+                    }`}>
+                      {isPositive ? (
+                        <TrendingUp className="w-3 h-3" />
+                      ) : (
+                        <TrendingDown className="w-3 h-3" />
+                      )}
+                      <span className="text-sm font-medium">
+                        {isPositive ? '+' : ''}{asset.change24h.toFixed(2)}%
+                      </span>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="text-right">
-                  <p className="text-lg font-bold text-white">
-                    {asset.totalValue.toLocaleString('pl-PL', { style: 'currency', currency: 'PLN' })}
-                  </p>
-                  <div className={`flex items-center justify-end gap-1 mt-1 ${
-                    isPositive ? 'text-green-400' : 'text-red-400'
-                  }`}>
-                    {isPositive ? (
-                      <TrendingUp className="w-3 h-3" />
-                    ) : (
-                      <TrendingDown className="w-3 h-3" />
-                    )}
-                    <span className="text-sm font-medium">
-                      {isPositive ? '+' : ''}{asset.change24h.toFixed(2)}%
-                    </span>
-                  </div>
+                <div className="w-full bg-secondary rounded-full h-1.5">
+                  <div
+                    className={`h-1.5 rounded-full transition-all ${
+                      isPositive
+                        ? 'bg-gradient-to-r from-green-600 to-green-400'
+                        : 'bg-gradient-to-r from-red-600 to-red-400'
+                    }`}
+                    style={{ width: `${Math.min((asset.totalValue / totalValue) * 100, 100)}%` }}
+                  />
                 </div>
               </div>
-
-              <div className="w-full bg-gray-700/30 rounded-full h-1.5">
-                <div 
-                  className={`h-1.5 rounded-full ${
-                    isPositive 
-                      ? 'bg-gradient-to-r from-green-600 to-green-400' 
-                      : 'bg-gradient-to-r from-red-600 to-red-400'
-                  }`}
-                  style={{ width: `${Math.min((asset.totalValue / totalValue) * 100, 100)}%` }}
-                />
-              </div>
-            </div>
-          );
-        })}
+            );
+          })
+        )}
       </div>
 
-      <button className="w-full mt-4 py-3 text-sm text-gray-400 hover:text-white hover:bg-gray-800/30 rounded-lg border border-gray-700/50 transition-colors">
+      <button className="w-full mt-4 py-3 text-sm text-muted-foreground hover:text-card-foreground hover:bg-accent rounded-lg border border-border transition-colors">
         Zarządzaj aktywami
       </button>
     </div>
