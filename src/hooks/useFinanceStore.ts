@@ -26,9 +26,9 @@ export interface Asset {
   name: string;
   symbol: string;
   quantity: number;
-  currentPrice: number;
-  totalValue: number;
-  change24h: number;
+  current_price: number;
+  total_value: number;
+  change_24h: number;
 }
 
 interface FinanceState {

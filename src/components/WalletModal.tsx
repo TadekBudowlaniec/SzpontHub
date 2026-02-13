@@ -23,7 +23,7 @@ interface WalletModalProps {
 export function WalletModal({ isOpen, onClose, editingWallet }: WalletModalProps) {
   const [name, setName] = useState('');
   const [type, setType] = useState<'fiat' | 'crypto' | 'stock'>('fiat');
-  const [color, setColor] = useState('from-blue-500 to-cyan-600');
+  const [color, setColor] = useState('from-violet-600 to-purple-500');
   const [icon, setIcon] = useState('wallet');
   const [loading, setLoading] = useState(false);
 
@@ -36,7 +36,7 @@ export function WalletModal({ isOpen, onClose, editingWallet }: WalletModalProps
     } else {
       setName('');
       setType('fiat');
-      setColor('from-blue-500 to-cyan-600');
+      setColor('from-violet-600 to-purple-500');
       setIcon('wallet');
     }
   }, [editingWallet, isOpen]);
@@ -125,12 +125,16 @@ export function WalletModal({ isOpen, onClose, editingWallet }: WalletModalProps
 
           <div>
             <label className="block text-sm text-muted-foreground mb-2">Kolor</label>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               {[
-                'from-blue-500 to-cyan-600',
-                'from-purple-500 to-pink-600',
-                'from-green-500 to-emerald-600',
-                'from-orange-500 to-red-600'
+                'from-violet-600 to-purple-500',
+                'from-indigo-500 to-blue-600',
+                'from-blue-500 to-cyan-500',
+                'from-emerald-500 to-teal-600',
+                'from-amber-500 to-orange-600',
+                'from-rose-500 to-pink-600',
+                'from-fuchsia-500 to-violet-600',
+                'from-slate-700 to-zinc-800',
               ].map((c) => (
                 <button
                   key={c}

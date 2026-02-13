@@ -28,15 +28,15 @@ export async function POST(request: Request) {
       return new NextResponse(authError.message, { status: 400 });
     }
 
-    // Dodaj użytkownika do tabeli User
+    // Dodaj użytkownika do tabeli users
     const { error: dbError } = await supabaseAdmin
-      .from("User")
+      .from("users")
       .insert({
         id: authData.user.id,
         email,
         name,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
       });
 
     if (dbError) {

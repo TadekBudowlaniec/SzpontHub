@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { DashboardLayout } from '@/components/DashboardLayout';
+import Link from 'next/link';
 import { WalletCard } from '@/components/WalletCard';
 import { TransactionList } from '@/components/TransactionList';
 import { AssetList } from '@/components/AssetList';
@@ -10,7 +10,7 @@ import { BTCWidget } from '@/components/BTCWidget';
 import { TransactionModal } from '@/components/TransactionModal';
 import { WalletModal } from '@/components/WalletModal';
 import { useFinanceStore, Transaction, Wallet, Asset } from '@/hooks/useFinanceStore';
-import { TrendingUp, Wallet as WalletIcon, ArrowUpRight, ArrowDownRight, Plus, Filter } from 'lucide-react';
+import { TrendingUp, Wallet as WalletIcon, ArrowUpRight, ArrowDownRight, Plus, ArrowRight } from 'lucide-react';
 import { subDays, format } from 'date-fns';
 import { pl } from 'date-fns/locale';
 import { deleteTransactionAction, deleteWalletAction } from '@/app/actions';
@@ -30,14 +30,14 @@ function getGreeting(): string {
   return 'Dobrej nocy';
 }
 
-export function DashboardClient({ initialWallets, initialTransactions, initialAssets, userName }: Props) {
+export function DashboardOverview({ initialWallets, initialTransactions, initialAssets, userName }: Props) {
   const [isTransModalOpen, setIsTransModalOpen] = useState(false);
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [editingWallet, setEditingWallet] = useState<Wallet | null>(null);
   const [range, setRange] = useState<'1W' | '1M' | '3M' | '1Y'>('1M');
 
-  const { wallets, transactions, assets, activeWalletId, setWallets, setTransactions, setAssets, setActiveWallet } = useFinanceStore();
+  const { wallets, transactions, assets, setWallets, setTransactions, setAssets } = useFinanceStore();
 
   useEffect(() => {
     setWallets(initialWallets);
@@ -45,15 +45,9 @@ export function DashboardClient({ initialWallets, initialTransactions, initialAs
     setAssets(initialAssets);
   }, [initialWallets, initialTransactions, initialAssets, setWallets, setTransactions, setAssets]);
 
-  const filteredTransactions = useMemo(() => {
-    if (!activeWalletId) return transactions;
-    return transactions.filter(t => t.wallet === activeWalletId);
-  }, [transactions, activeWalletId]);
-
   const stats = useMemo(() => {
-    const currentWallets = activeWalletId ? wallets.filter(w => w.id === activeWalletId) : wallets;
-    const walletsTotal = currentWallets.reduce((sum, wallet) => sum + wallet.balance, 0);
-    const assetsTotal = assets.reduce((sum, asset) => sum + (asset.totalValue || 0), 0);
+    const walletsTotal = wallets.reduce((sum, wallet) => sum + wallet.balance, 0);
+    const assetsTotal = assets.reduce((sum, asset) => sum + (asset.total_value || 0), 0);
     const netWorth = walletsTotal + assetsTotal;
 
     const today = new Date();
@@ -63,47 +57,31 @@ export function DashboardClient({ initialWallets, initialTransactions, initialAs
     if (range === '3M') startDate = subDays(today, 90);
     if (range === '1Y') startDate = subDays(today, 365);
 
-    const periodTransactions = filteredTransactions.filter(t => new Date(t.date) >= startDate);
+    const periodTransactions = transactions.filter(t => new Date(t.date) >= startDate);
     const income = periodTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
     const outcome = periodTransactions.filter(t => t.type === 'outcome').reduce((sum, t) => sum + Math.abs(t.amount), 0);
 
     return { totalNetWorth: netWorth, totalIncome: income, totalOutcome: outcome, profit: income - outcome, periodLabel: range };
-  }, [wallets, assets, filteredTransactions, activeWalletId, range]);
+  }, [wallets, assets, transactions, range]);
 
   const handleDeleteTransaction = async (id: string) => {
     if (confirm('Czy na pewno?')) await deleteTransactionAction(id);
   };
 
   const handleDeleteWallet = async (id: string) => {
-    if (confirm('Czy na pewno?')) {
-      await deleteWalletAction(id);
-      if (activeWalletId === id) setActiveWallet(null);
-    }
+    if (confirm('Czy na pewno?')) await deleteWalletAction(id);
   };
 
   return (
-    <DashboardLayout>
+    <>
       <div className="mb-3 flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div>
-          {activeWalletId ? (
-            <>
-              <h1 className="text-3xl font-bold text-foreground mb-2">
-                Portfel: <span className="text-primary">{wallets.find(w => w.id === activeWalletId)?.name}</span>
-              </h1>
-              <button onClick={() => setActiveWallet(null)} className="text-primary hover:underline flex items-center gap-1 text-sm">
-                <Filter className="w-3 h-3"/> Wróć do przeglądu
-              </button>
-            </>
-          ) : (
-            <>
-              <h1 className="text-5xl font-bold text-foreground mb-2">
-                {getGreeting()}, <span className="text-primary">{userName}</span>
-              </h1>
-              <p className="text-xl text-muted-foreground">
-                {format(new Date(), "EEEE, d MMMM yyyy", { locale: pl })}
-              </p>
-            </>
-          )}
+          <h1 className="text-5xl font-bold text-foreground mb-2">
+            {getGreeting()}, <span className="text-primary">{userName}</span>
+          </h1>
+          <p className="text-xl text-muted-foreground">
+            {format(new Date(), "EEEE, d MMMM yyyy", { locale: pl })}
+          </p>
         </div>
         <div className="flex gap-2">
           <button
@@ -167,44 +145,54 @@ export function DashboardClient({ initialWallets, initialTransactions, initialAs
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-3">
         <div className="lg:col-span-2 bg-card border border-border rounded-xl overflow-hidden">
-          <FinancialChart transactions={filteredTransactions} range={range} setRange={setRange} />
+          <FinancialChart transactions={transactions} range={range} setRange={setRange} />
         </div>
         <div className="bg-card border border-border rounded-xl overflow-hidden">
           <BTCWidget />
         </div>
       </div>
 
-      {/* Wallets */}
-      <div id="wallets" className="mb-3 scroll-mt-3">
-        <h2 className="text-2xl font-bold text-foreground mb-3">Portfele</h2>
+      {/* Wallets preview */}
+      <div className="mb-3">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-2xl font-bold text-foreground">Portfele</h2>
+          <Link href="/wallets" className="flex items-center gap-1 text-sm text-primary hover:underline">
+            Zobacz wszystkie <ArrowRight className="w-4 h-4" />
+          </Link>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-          {wallets.map((wallet) => (
-            <div
+          {wallets.slice(0, 4).map((wallet) => (
+            <WalletCard
               key={wallet.id}
-              onClick={() => setActiveWallet(activeWalletId === wallet.id ? null : wallet.id)}
-              className={`cursor-pointer transition-all ${activeWalletId === wallet.id ? 'ring-2 ring-primary scale-105' : 'hover:scale-105'}`}
-            >
-              <WalletCard
-                wallet={wallet}
-                onEdit={(w) => { setEditingWallet(w); setIsWalletModalOpen(true); }}
-                onDelete={handleDeleteWallet}
-              />
-            </div>
+              wallet={wallet}
+              onEdit={(w) => { setEditingWallet(w); setIsWalletModalOpen(true); }}
+              onDelete={handleDeleteWallet}
+            />
           ))}
         </div>
       </div>
 
-      {/* Assets & Transactions */}
-      <div id="assets" className="grid grid-cols-1 lg:grid-cols-2 gap-3 scroll-mt-3">
+      {/* Assets & Transactions preview */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         <div className="bg-card border border-border rounded-xl overflow-hidden">
           <AssetList assets={assets} />
+          <div className="px-6 pb-4">
+            <Link href="/assets" className="flex items-center justify-center gap-1 text-sm text-primary hover:underline">
+              Wszystkie aktywa <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
         </div>
         <div className="bg-card border border-border rounded-xl overflow-hidden">
           <TransactionList
-            transactions={filteredTransactions.slice(0, 10)}
+            transactions={transactions.slice(0, 10)}
             onDelete={handleDeleteTransaction}
             onEdit={(t) => { setEditingTransaction(t); setIsTransModalOpen(true); }}
           />
+          <div className="px-6 pb-4">
+            <Link href="/transactions" className="flex items-center justify-center gap-1 text-sm text-primary hover:underline">
+              Wszystkie transakcje <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
         </div>
       </div>
 
@@ -219,6 +207,6 @@ export function DashboardClient({ initialWallets, initialTransactions, initialAs
         onClose={() => setIsWalletModalOpen(false)}
         editingWallet={editingWallet}
       />
-    </DashboardLayout>
+    </>
   );
 }

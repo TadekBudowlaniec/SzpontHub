@@ -20,7 +20,8 @@ import {
   TokenUSDC,
 } from '@token-icons/react';
 
-const cryptoIconMap: Record<string, React.ComponentType<{ size?: number; variant?: 'branded' | 'mono' }>> = {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const cryptoIconMap: Record<string, React.ComponentType<any>> = {
   BTC: TokenBTC,
   ETH: TokenETH,
   SOL: TokenSOL,
@@ -45,7 +46,7 @@ interface AssetListProps {
 }
 
 export function AssetList({ assets }: AssetListProps) {
-  const totalValue = assets.reduce((sum, asset) => sum + asset.totalValue, 0);
+  const totalValue = assets.reduce((sum, asset) => sum + asset.total_value, 0);
 
   return (
     <div className="p-6">
@@ -67,7 +68,7 @@ export function AssetList({ assets }: AssetListProps) {
           <p className="text-muted-foreground text-center py-8">Brak aktywów</p>
         ) : (
           assets.map((asset) => {
-            const isPositive = asset.change24h >= 0;
+            const isPositive = asset.change_24h >= 0;
 
             return (
               <div
@@ -93,14 +94,14 @@ export function AssetList({ assets }: AssetListProps) {
                         </span>
                       </div>
                       <p className="text-sm text-muted-foreground mt-0.5">
-                        {asset.quantity} × {asset.currentPrice.toLocaleString('pl-PL')} PLN
+                        {asset.quantity} × {asset.current_price.toLocaleString('pl-PL')} PLN
                       </p>
                     </div>
                   </div>
 
                   <div className="text-right">
                     <p className="text-lg font-bold text-card-foreground">
-                      {asset.totalValue.toLocaleString('pl-PL', { style: 'currency', currency: 'PLN' })}
+                      {asset.total_value.toLocaleString('pl-PL', { style: 'currency', currency: 'PLN' })}
                     </p>
                     <div className={`flex items-center justify-end gap-1 mt-1 ${
                       isPositive ? 'text-green-500' : 'text-red-500'
@@ -111,7 +112,7 @@ export function AssetList({ assets }: AssetListProps) {
                         <TrendingDown className="w-3 h-3" />
                       )}
                       <span className="text-sm font-medium">
-                        {isPositive ? '+' : ''}{asset.change24h.toFixed(2)}%
+                        {isPositive ? '+' : ''}{asset.change_24h.toFixed(2)}%
                       </span>
                     </div>
                   </div>
@@ -124,7 +125,7 @@ export function AssetList({ assets }: AssetListProps) {
                         ? 'bg-gradient-to-r from-green-600 to-green-400'
                         : 'bg-gradient-to-r from-red-600 to-red-400'
                     }`}
-                    style={{ width: `${Math.min((asset.totalValue / totalValue) * 100, 100)}%` }}
+                    style={{ width: `${Math.min((asset.total_value / totalValue) * 100, 100)}%` }}
                   />
                 </div>
               </div>

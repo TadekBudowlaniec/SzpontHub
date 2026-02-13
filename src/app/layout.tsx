@@ -1,23 +1,23 @@
 import type { Metadata } from "next";
-import { Space_Grotesk, Source_Serif_4, Source_Code_Pro } from "next/font/google";
+import { Plus_Jakarta_Sans, Lora, IBM_Plex_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import "./globals.css";
 
-const spaceGrotesk = Space_Grotesk({
+const plusJakarta = Plus_Jakarta_Sans({
   subsets: ["latin", "latin-ext"],
-  weight: ["300", "400", "500", "600", "700"],
+  weight: ["300", "400", "500", "600", "700", "800"],
   variable: "--font-sans",
   display: "swap",
 });
 
-const sourceSerif = Source_Serif_4({
+const lora = Lora({
   subsets: ["latin", "latin-ext"],
   weight: ["400", "500", "600", "700"],
   variable: "--font-serif",
   display: "swap",
 });
 
-const sourceCodePro = Source_Code_Pro({
+const ibmPlexMono = IBM_Plex_Mono({
   subsets: ["latin", "latin-ext"],
   weight: ["400", "500", "600", "700"],
   variable: "--font-mono",
@@ -37,7 +37,7 @@ export default function RootLayout({
   return (
     <html lang="pl" suppressHydrationWarning>
       <body
-        className={`${spaceGrotesk.variable} ${sourceSerif.variable} ${sourceCodePro.variable} ${spaceGrotesk.className} min-h-screen bg-background text-foreground antialiased`}
+        className={`${plusJakarta.variable} ${lora.variable} ${ibmPlexMono.variable} ${plusJakarta.className} min-h-screen bg-background text-foreground antialiased`}
       >
         <ThemeProvider
           attribute="class"

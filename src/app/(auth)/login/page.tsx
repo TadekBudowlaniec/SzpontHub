@@ -26,7 +26,10 @@ export default function LoginPage() {
       });
 
       if (error) {
-        setError('Nieprawidłowy email lub hasło');
+        console.error('Login error:', error.message, error.status);
+        setError(error.message === 'Invalid login credentials'
+          ? 'Nieprawidłowy email lub hasło. Jeśli konto było tworzone przed migracją, zarejestruj się ponownie.'
+          : error.message);
       } else {
         router.push('/');
         router.refresh();

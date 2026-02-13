@@ -7,6 +7,20 @@ const config: Config = {
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
+  safelist: [
+    // Wallet card gradient colors (stored in DB)
+    'from-violet-600', 'to-purple-500',
+    'from-indigo-500', 'to-blue-600',
+    'from-blue-500', 'to-cyan-500', 'to-cyan-600',
+    'from-emerald-500', 'to-teal-600',
+    'from-amber-500', 'to-orange-600',
+    'from-rose-500', 'to-pink-600',
+    'from-fuchsia-500', 'to-violet-600',
+    'from-slate-700', 'to-zinc-800',
+    'from-green-500', 'to-emerald-600',
+    'from-orange-500', 'to-red-600',
+    'from-purple-500',
+  ],
   theme: {
     extend: {
       colors: {

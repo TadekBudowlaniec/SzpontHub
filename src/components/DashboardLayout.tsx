@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
   Wallet,
+  ArrowLeftRight,
   PiggyBank,
   LogOut,
   TrendingUp
@@ -15,16 +16,23 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 
 interface DashboardLayoutProps {
   children: ReactNode;
+  userName: string;
 }
 
 const navItems = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '#wallets', label: 'Portfele', icon: Wallet },
-  { href: '#assets', label: 'Aktywa', icon: PiggyBank },
+  { href: '/wallets', label: 'Portfele', icon: Wallet },
+  { href: '/transactions', label: 'Transakcje', icon: ArrowLeftRight },
+  { href: '/assets', label: 'Aktywa', icon: PiggyBank },
 ];
 
-export function DashboardLayout({ children }: DashboardLayoutProps) {
+export function DashboardLayout({ children, userName }: DashboardLayoutProps) {
   const pathname = usePathname();
+
+  const isActive = (href: string) => {
+    if (href === '/') return pathname === '/';
+    return pathname.startsWith(href);
+  };
 
   const handleSignOut = async () => {
     await signOutAction();
@@ -52,13 +60,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           <nav className="flex-1 p-4 space-y-1">
             {navItems.map((item) => {
               const Icon = item.icon;
-              const isActive = pathname === item.href;
+              const active = isActive(item.href);
               return (
                 <Link
                   key={item.href}
                   href={item.href}
                   className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                    isActive
+                    active
                       ? 'bg-sidebar-primary text-sidebar-primary-foreground'
                       : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
                   }`}
@@ -109,11 +117,35 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       </header>
 
       {/* Main content */}
-      <main className="lg:ml-64 min-h-screen">
+      <main className="lg:ml-64 min-h-screen pb-20 lg:pb-0">
         <div className="p-6 pt-20 lg:pt-6">
           {children}
         </div>
       </main>
+
+      {/* Mobile bottom navigation */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-card border-t border-border">
+        <div className="flex items-center justify-around py-2">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const active = isActive(item.href);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors ${
+                  active
+                    ? 'text-primary'
+                    : 'text-muted-foreground'
+                }`}
+              >
+                <Icon className="w-5 h-5" />
+                <span className="text-xs font-medium">{item.label}</span>
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
     </div>
   );
 }

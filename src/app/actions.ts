@@ -2,20 +2,18 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { getUser } from '@/lib/supabase/cached';
 import { revalidatePath } from 'next/cache';
 import { nanoid } from 'nanoid';
 
 async function getUserId() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getUser();
   return user?.id;
 }
 
 // --- POBIERANIE DANYCH ---
-export async function getDashboardData() {
-  const userId = await getUserId();
-  if (!userId) return null;
 
+async function fetchWalletsAndTransactions(userId: string) {
   const { data: wallets, error: walletsError } = await supabaseAdmin
     .from('wallets')
     .select('*')
@@ -46,6 +44,15 @@ export async function getDashboardData() {
     type: t.type as 'income' | 'outcome'
   }));
 
+  return { wallets: wallets || [], transactions };
+}
+
+export async function getDashboardData() {
+  const userId = await getUserId();
+  if (!userId) return null;
+
+  const { wallets, transactions } = await fetchWalletsAndTransactions(userId);
+
   const { data: assets, error: assetsError } = await supabaseAdmin
     .from('assets')
     .select('*')
@@ -55,7 +62,37 @@ export async function getDashboardData() {
     console.error('Error fetching assets:', assetsError);
   }
 
-  return { wallets: wallets || [], transactions, assets: assets || [] };
+  return { wallets, transactions, assets: assets || [] };
+}
+
+export async function getWalletsWithTransactions() {
+  const userId = await getUserId();
+  if (!userId) return null;
+
+  return fetchWalletsAndTransactions(userId);
+}
+
+export async function getTransactionsData() {
+  const userId = await getUserId();
+  if (!userId) return null;
+
+  return fetchWalletsAndTransactions(userId);
+}
+
+export async function getAssetsData() {
+  const userId = await getUserId();
+  if (!userId) return null;
+
+  const { data: assets, error: assetsError } = await supabaseAdmin
+    .from('assets')
+    .select('*')
+    .eq('user_id', userId);
+
+  if (assetsError) {
+    console.error('Error fetching assets:', assetsError);
+  }
+
+  return { assets: assets || [] };
 }
 
 // --- TRANSAKCJE ---
@@ -102,7 +139,7 @@ export async function addTransactionAction(data: any) {
     .update({ balance: wallet.balance + data.amount })
     .eq('id', data.wallet);
 
-  revalidatePath('/');
+  revalidatePath('/', 'layout');
 }
 
 export async function deleteTransactionAction(id: string) {
@@ -128,7 +165,7 @@ export async function deleteTransactionAction(id: string) {
     .delete()
     .eq('id', id);
 
-  revalidatePath('/');
+  revalidatePath('/', 'layout');
 }
 
 export async function editTransactionAction(id: string, data: any) {
@@ -176,7 +213,7 @@ export async function editTransactionAction(id: string, data: any) {
       .eq('id', newWallet.id);
   }
 
-  revalidatePath('/');
+  revalidatePath('/', 'layout');
 }
 
 // --- PORTFELE ---
@@ -204,7 +241,7 @@ export async function addWalletAction(data: any) {
     throw new Error(error.message);
   }
 
-  revalidatePath('/');
+  revalidatePath('/', 'layout');
 }
 
 export async function editWalletAction(id: string, data: any) {
@@ -230,7 +267,7 @@ export async function editWalletAction(id: string, data: any) {
     })
     .eq('id', id);
 
-  revalidatePath('/');
+  revalidatePath('/', 'layout');
 }
 
 export async function deleteWalletAction(id: string) {
@@ -257,12 +294,12 @@ export async function deleteWalletAction(id: string) {
     .delete()
     .eq('id', id);
 
-  revalidatePath('/');
+  revalidatePath('/', 'layout');
 }
 
 // --- WYLOGOWANIE ---
 export async function signOutAction() {
   const supabase = await createClient();
   await supabase.auth.signOut();
-  revalidatePath('/');
+  revalidatePath('/', 'layout');
 }
